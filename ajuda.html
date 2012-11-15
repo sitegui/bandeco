@@ -1,0 +1,166 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sitegui - API do bandeco (Versão 2.0 - 14/11/2012)</title>
+<script src="../../ajax/2.0.js"></script>
+<style>
+.subItem {
+	position:relative;
+	left:25px;
+	display:inline-block;
+}
+</style>
+<script>
+var ra = null
+
+var parametros = {
+	busca: {metodo: "GET", parametros: ['busca', 'max', 'ra']},
+	cardapio: {metodo: "GET", parametros: ['dia', 'mes', 'ano', 'almoco', 'delta', 'ra']},
+	avisos: {metodo: "GET", parametros: ['desde']},
+	infoFamilia: {metodo: "GET", parametros: ['familia', 'refeicoes', 'ra']},
+	infoPrato: {metodo: "GET", parametros: ['prato', 'refeicoes', 'ra']},
+	infoRefeicao: {metodo: "GET", parametros: ['refeicao', 'ra']},
+	ranking: {metodo: "GET", parametros: ['inicio', 'quantidade', 'ra']},
+	semana: {metodo: "GET", parametros: ['semana', 'ra']},
+	votar: {metodo: "POST", parametros: ['refeicao', 'ra', 'voto']},
+	temOuvinte: {metodo: "GET", parametros: ['ra']},
+	pedirChave: {metodo: "POST", parametros: ['ra']},
+	getOuvinte: {metodo: "GET", parametros: ['ra', 'chave']},
+	removerOuvinte: {metodo: "POST", parametros: ['ra', 'chave']},
+	setOuvinte: {metodo: "POST", parametros: ['ra', 'email', 'nome', 'avisos', 'chave']}
+}
+
+onload = function () {
+	var i, opt
+	
+	for (i in parametros) {
+		opt = document.createElement("option")
+		opt.text = opt.value = i
+		document.getElementById("select").appendChild(opt)
+	}
+	
+	;(document.getElementById("select").onchange = function () {
+		var span = document.getElementById("parametros")
+		var pars = parametros[document.getElementById("select").value], i
+		var html = []
+		for (i in pars.parametros)
+			html.push(pars.parametros[i]+"=<input id='par"+pars.parametros[i]+"'"+((pars.parametros[i]=="ra" && ra) ? ra : "")+">")
+		span.innerHTML = html.join("&")
+	})()
+	
+	document.getElementById("form").onsubmit = function (evento) {
+		var url = "http://sitegui.com.br/apis/bandeco", xhr
+		var value = document.getElementById("select").value
+		var pars = parametros[value], saida = document.getElementById("saida"), i
+		url += "/"+value
+		
+		var dados = {}
+		for (i in pars.parametros)
+			if (value = document.getElementById("par"+pars.parametros[i]).value)
+				dados[pars.parametros[i]] = value
+		
+		Ajax({url: url, dados: dados, funcaoErro: function () {
+			saida.innerHTML = "==Erro na requisição==<br>"+this.responseText
+		}, funcao: function (x) {
+			saida.innerHTML = obj2html(x)
+		}, retorno: "JSON", metodo: pars.metodo})
+		
+		evento.preventDefault()
+	}
+}
+
+function obj2html(obj) {
+	var html = "<div class='subItem'>", i
+	html += "<strong>"+i+"</strong>:"
+	if (obj[i] === null)
+		html += " <em>null</em><br>\n"
+	else if (obj[i] === true)
+		html += " <em>true</em><br>\n"
+	else if (obj[i] === false)
+		html += " <em>false</em><br>\n"
+	else
+		
+	for (i in obj) {
+		html += "<strong>"+i+"</strong>:"
+		if (obj[i] === null)
+			html += " <em>null</em><br>\n"
+		else if (obj[i] === true)
+			html += " <em>true</em><br>\n"
+		else if (obj[i] === false)
+			html += " <em>false</em><br>\n"
+		else if (typeof obj[i] == "object")
+			html += "<br>"+obj2html(obj[i])+"<br>\n"
+		else
+			html += " "+obj[i]+"<br>\n"
+	}
+	html += "</div>"
+	return html
+}
+</script>
+<style>
+.url_base {
+	color:gray;
+	font-size:small;
+}
+td {
+	text-align:left;
+	border-right:thin black solid;
+	border-bottom:thin black solid;
+	padding:3px;
+}
+ul {
+	padding-left:1em;
+}
+</style>
+</head>
+
+<body>
+<h1>Sitegui - API do bandeco (Versão 1.2 - 12/05/2012)</h1>
+<h2>Introdução</h2>
+	Essa é uma API em desenvolvimento que irá interagir com o cardápio do bandeco, disponibilizando histórico, rankings entre outras coisas.
+<h2>Licensa de uso</h2>
+	Você pode usar essa API para qualquer tipo de aplicação desde que você inclua uma referência à página <a href='http://sitegui.com.br'>http://sitegui.com.br</a> nos créditos<br>
+	O código é distribuído livremente. Fique à vontade para ver, alterar ou criar seu servidor próprio dessa API.<br>
+	Só peço uma coisa: seja sensato ao usar essa API, faça cache dos resultados e evite fazer várias requisições de uma vez. Evite também pedir resultados personalizados (enviando o RA) quando não for usa-los.
+	<h2>Como usar</h2>
+	Essa API é baseada em requisições HTTP, que podem ser realizadas por qualquer dispositivo conectado à Internet.<br>
+	O servidor irá responder às requisições usando o formato <a href='http://json.org' target="_blank">JSON</a> (mais detalhes na próxima seção)<br>
+	Exemplos:<ul>
+	<li>ver o cardápio do bandeco: <a href='http://sitegui.com.br/apis/bandeco/cardapio'>http://sitegui.com.br/apis/bandeco/cardapio</a></li>
+	<li>ver o cardápio da janta de hoje: <a href='http://sitegui.com.br/apis/bandeco/cardapio?almoco=0'>http://sitegui.com.br/apis/bandeco/cardapio?almoco=0</a></li>
+	<li>ver o histórico de carne assada: <a href='http://sitegui.com.br/apis/bandeco/info?prato=23'>http://sitegui.com.br/apis/bandeco/info?prato=23</a></li>
+	</ul>
+	Em JavaScript, você deve usar AJAX para pegar as informações. Você pode usar minha <a href='http://sitegui.com.br/apis#ajax'>API Ajax</a> para facilitar o trabalho.<br>
+	Exemplo (alerta o prato principal):<br>
+	<pre>
+Ajax({url: "http://sitegui.com.br/apis/bandeco/cardapio",
+	retorno: "json",
+	funcao: function (refeicao) {
+		alert(refeicao.prato.nome)
+	}
+})
+	</pre>
+<h2>Documentação</h2>
+	A API trabalha com as seguintes estruturas:<br>
+	<ul>
+		<li>Data: <code>{dia: int, mes: int, ano: int, semana: int, almoco: boolean}</code></li>
+		<li>Familia: <code>{id: int, nome: string, nota: number, numVotos: int}</code> (nota pode ser null)</li>
+		<li>Prato: <code>{id: int, familia: Familia, nome: string, nota: number, notaPessoal: number, numVotos: int}</code> (familia, nota e notaPessoal podem ser null)</li>
+		<li>Rank: <code>{total: int, posicao: int}</code> (posicao pode ser null)</li>
+		<li>Refeicao: <code>{id: int, data: Data, prato: Prato, guarnicao: string, pts: string, salada: string, sobremesa: string, suco: string, nota: number, notaPessoal: int, podeVotar: boolean, numVotos: int, proxima: int, anterior: int}</code> (nota, notaPessoal, proxima e anterior podem ser null)</li>
+	</ul>
+	A API consiste das seguintes requisições:<br>
+<h2>Playground</h2>
+Você pode testar o comportamento da API por meio desse playground. Somente a opção de votar não está disponível.<br>
+Desligue o bloqueador de pop-ups para navegar pelos dados retornados pela API.<br>
+<form id="form">
+http://sitegui.com.br/apis/bandeco/<select id="select"></select>?<span id="parametros"></span><br>
+<input type="submit" value="Enviar">
+<div id="saida"></div>
+</form>
+<h2>Recursos</h2>
+	<a href="#" onclick="window.open('/fale_conosco/?assunto=apis_bandeco', 'janelaFaleConosco', 'width=500,height=500'); return false">Fale Conosco</a><br>
+	Download do <a href='bandeco_1_2.rar'>código fonte</a> (17,4 KiB)
+</body>
+</html>
