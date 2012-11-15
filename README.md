@@ -1,4 +1,12 @@
-bandeco
+API Bandeco
 =======
 
-API para obter o histórico e dados das refeições do bandejão da Unicamp
+API para obter o histórico e dados das refeições do bandejão da Unicamp.
+Documentação: http://sitegui.com.br/apis/bandeco
+
+Web App Bandeco
+=======
+
+Interface para acessar os dados da API, baseado em HTML5, CSS e JS.
+Acessível de qualquer praticamente dispositivo com acesso à Internet
+URL: http://sitegui.com.br/bandeco
