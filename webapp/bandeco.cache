@@ -1,0 +1,23 @@
+CACHE MANIFEST
+
+# Bandeco Web App
+# Versão 2.3.1 - 15/05/2012 - 2
+# Guilherme de Oliveira Souza
+# http://sitegui.com.br
+
+0.png
+1.png
+-1.png
+2.png
+-2.png
+ajax.js
+bandeco.js
+cog.png
+help.png
+icone.png
+index.html
+next.png
+prev.png
+
+NETWORK:
+http://sitegui.com.br/apis/bandeco

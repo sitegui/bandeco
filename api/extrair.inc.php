@@ -1,9 +1,8 @@
 <?php
 // Extrai as informações do site da prefeitura
 // Recebe o número da página (padrão: 1)
-// Retorna uma array com os índices: prato, guarnicao, pts, salada, sobremesa, suco, data, proximo (booleano)
+// Retorna uma array com os índices: prato, guarnicao, pts, salada, sobremesa, suco, data
 // O índice "data" é um objeto do tipo Data
-// O índice "proximo" indica se há uma próxima página no cardápio
 // Em caso de erro, retorna false
 function extrair($pag=1) {
 	// Pega o conteúdo da página
@@ -34,7 +33,6 @@ function extrair($pag=1) {
 	// Interpreta o cardápio em si
 	$resposta = array('prato' => '', 'guarnicao' => '', 'pts' => '', 'salada' => '', 'sobremesa' => '', 'suco' => '');
 	$resposta['data'] = $data;
-	$resposta['proximo'] = in_array('Próximo', $partes);
 	
 	$tags = array('prato principal:  ' => 'prato', 'salada: ' => 'salada', 'sobremesa: ' => 'sobremesa', 'suco: ' => 'suco');
 	for ($i=2; $i<count($partes); $i++) {

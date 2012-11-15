@@ -9,6 +9,8 @@ http://sitegui.com.br
 Changelog:
 - 2.1
 	Suporte a argumentos de array indexadas, útil para UPDATEs: new Query("UPDATE t SET ? WHERE id=?", array('a' => 17), 27)
+	Suporte a argumentos de objetos com o método __toString definido
+	Métodos estáticos de apoio sintático (query, existe, getValor)
 - 2.0
 	Troca do driver do MySQL, da versão antiga mysql para a nova mysqli
 	Reescrito com orientação a objetos (classe Query)
@@ -90,8 +92,9 @@ class Query {
 			throw new ErrorException("Erro na execução da query: $query\nErro: " . Query::$conexao->error);
 	}
 	
+	// Executa a query e retorna tudo o que ela retornou
 	// Simplificação sintática para new Query()->get()
-	// $temp = new Query('...'); $temp->get($p, $c) fica Query::get($p, $c, '...')
+	// Uso: $usuarios = Query::query(false, 0, 'SELECT id FROM usuarios');
 	public static function query($primeiro /*=false*/, $coluna /*=NULL*/, $base /*, $args... */) {
 		$novo = new Query;
 		call_user_func_array(array($novo, '__construct'), array_slice(func_get_args(), 2));
@@ -100,10 +103,24 @@ class Query {
 	
 	// Verifica se a query retorna ao menos um resultado
 	// Simplificação sintática para (bool)(new Query()->result->num_rows)
+	// Uso: if (!Query::existe('SELECT 1 FROM usuarios WHERE nome=? AND senha=?', $nome, $senha)) exit;
 	public static function existe($base /*, $args... */) {
 		$novo = new Query;
 		call_user_func_array(array($novo, '__construct'), func_get_args());
 		return (bool)($novo->result->num_rows);
+	}
+	
+	// Pega o primeiro valor retornado pela query (ou NULL caso nenhum tenha sido retornado)
+	// Simplificação sintática para try {$valor = Query::query(true, 0, '...');} catch (Exception $e) {$valor = NULL;}
+	// Uso: $id = Query::getValor('SELECT id FROM usuarios WHERE nome=?', $nome);
+	public static function getValor($base /*, $args... */) {
+		try {
+			$novo = new Query;
+			call_user_func_array(array($novo, '__construct'), func_get_args());
+			return $novo->get(true, 0);
+		} catch (Exception $e) {
+			return NULL;
+		}
 	}
 	
 	// Retorna o resultado na forma de uma array bidimensional em que cada elemento da array 
