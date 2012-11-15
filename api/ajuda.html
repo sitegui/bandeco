@@ -18,7 +18,7 @@
 <script>
 var parametros = {
 	busca: {metodo: "GET", parametros: ['busca', 'max', 'ra']},
-	cardapio: {metodo: "GET", parametros: ['dia', 'mes', 'ano', 'almoco', 'delta', 'ra']},
+	cardapio: {metodo: "GET", parametros: ['dia', 'mes', 'ano', 'almoco', 'ra']},
 	avisos: {metodo: "GET", parametros: ['desde']},
 	infoFamilia: {metodo: "GET", parametros: ['familia', 'refeicoes', 'ra']},
 	infoPrato: {metodo: "GET", parametros: ['prato', 'refeicoes', 'ra']},
@@ -26,10 +26,9 @@ var parametros = {
 	ranking: {metodo: "GET", parametros: ['inicio', 'quantidade', 'ra']},
 	semana: {metodo: "GET", parametros: ['semana', 'ra']},
 	votar: {metodo: "POST", parametros: ['refeicao', 'ra', 'voto']},
-	temOuvinte: {metodo: "GET", parametros: ['ra']},
 	pedirChave: {metodo: "POST", parametros: ['ra']},
-	getOuvinte: {metodo: "GET", parametros: ['ra', 'chave']},
-	removerOuvinte: {metodo: "POST", parametros: ['ra', 'chave']},
+	getOuvinte: {metodo: "GET", parametros: ['chave']},
+	removerOuvinte: {metodo: "POST", parametros: ['chave']},
 	setOuvinte: {metodo: "POST", parametros: ['ra', 'email', 'nome', 'avisos', 'chave']}
 }
 
@@ -52,7 +51,7 @@ onload = function () {
 	})()
 	
 	document.getElementById("form").onsubmit = function (evento) {
-		var url = "http://sitegui.com.br/apis/bandeco", xhr
+		var url = ".", xhr
 		var value = document.getElementById("select").value
 		var pars = parametros[value], saida = document.getElementById("saida"), i
 		url += "/"+value
@@ -63,7 +62,7 @@ onload = function () {
 				dados[pars.parametros[i]] = value
 		
 		Ajax({url: url, dados: dados, funcaoErro: function () {
-			saida.innerHTML = "==Erro na requisição==<br>"+this.responseText
+			saida.innerHTML = "==Erro na requisição==<br>"+this.responseText.replace(/\n/g, "<br>")
 		}, funcao: function (x) {
 			saida.innerHTML = json2html(x)
 		}, retorno: "JSON", metodo: pars.metodo})
@@ -72,9 +71,8 @@ onload = function () {
 	}
 }
 
-function json2html(x, n) {
-	n = n || 0
-	var html = "<div class='subItem' style='padding-left:"+(25*n+3)+"px'>", i
+function json2html(x) {
+	var html = "<div class='subItem' style='padding-left:30px'>", i
 	
 	if (x === null)
 		return "<em>null</em><br>"
@@ -84,16 +82,16 @@ function json2html(x, n) {
 		return "<em>false</em><br>"
 	else if (Array.isArray(x)) {
 		for (i in x)
-			html += "<strong><em>"+i+"</em></strong>: "+json2html(x[i], n+1)
+			html += "<strong><em>"+i+"</em></strong>: "+json2html(x[i])
 	} else if (typeof x == "object") {
 		for (i in x)
-			html += "<strong>"+i+"</strong>: "+json2html(x[i], n+1)
+			html += "<strong>"+i+"</strong>: "+json2html(x[i])
 	} else if (typeof x == "number")
 		return String(x)+"<br>"
 	else
-		return "\""+x+"\"<br>"
+		return "\""+x.replace(/</g, "&lt;")+"\"<br>"
 	
-	return html.substr(0, html.length-4)+"</div>"
+	return html+"</div>"
 }
 </script>
 </head>
@@ -125,16 +123,17 @@ function json2html(x, n) {
 	}
 })</pre>
 
-<h2>Documentação e outros recursos</h2>
-	Todas as requisições (argumentos e retornos) e tipos que essa API trabalha estão documentados <a href="bandeco.xlsx">nesse documento</a><br>
-	Qualquer dúvida ou sugestão, <a href="#" onclick="window.open('/fale_conosco/?assunto=apis_bandeco', 'janelaFaleConosco', 'width=500,height=500'); return false">Fale Conosco</a><br>
-	Download do <a href="https://github.com/sitegui/bandeco/downloads">código fonte</a>
 <h2>Playground</h2>
 Você pode testar o comportamento da API por meio desse playground.<br>
 <form id="form">
 http://sitegui.com.br/apis/bandeco/<select id="select"></select>?<span id="parametros"></span><br>
 <input type="submit" value="Enviar">
-<div id="saida"></div>
 </form>
+<div id="saida" style="border:thin blue solid;min-height:25px;padding:3px;margin:10px;border-radius:5px">O retorno irá aparecer aqui</div>
+
+<h2>Documentação e outros recursos</h2>
+	Todas as requisições (argumentos e retornos) e tipos que essa API trabalha estão documentados <a href="bandeco.xlsx">nesse documento</a><br>
+	Qualquer dúvida ou sugestão, <a href="#" onclick="window.open('/fale_conosco/?assunto=apis_bandeco', 'janelaFaleConosco', 'width=500,height=500'); return false">Fale Conosco</a><br>
+	Download do <a href="https://github.com/sitegui/bandeco/downloads">código fonte</a>
 </body>
 </html>

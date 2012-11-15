@@ -11,7 +11,7 @@ class Aviso {
 	public function __construct($base) {
 		$this->id = $base['id'];
 		$this->tipo = $base['tipo'];
-		$this->refeicao = new Refeicao($base['refeicao']);
+		$this->refeicao = new Refeicao(Query::query(true, NULL, 'SELECT * FROM refeicoes WHERE id=? LIMIT 1', $base['refeicao']));
 		$this->data = new Data($base['data']);
 	}
 }

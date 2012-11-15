@@ -8,8 +8,6 @@ require_once 'Data.class.php';
 
 set_time_limit(90);
 
-$cacheProximas = getCacheProximas();
-
 // Atualiza os pratos
 $pag = 1;
 while ($dados = extrair($pag++)) {
@@ -34,43 +32,14 @@ while ($dados = extrair($pag++)) {
 		$dadosInsert = $dados;
 		$dadosInsert['data'] = (string)$dadosInsert['data'];
 		new Query('INSERT INTO refeicoes SET ?', $dadosInsert);
-	}
-	
-	if (queryReturns("SELECT id FROM refeicoes WHERE data='$dados[data]' LIMIT 1"))
-		query("UPDATE refeicoes SET prato=$id, guarnicao='?', pts='?', salada='?', sobremesa='?', suco='?' WHERE data='$dados[data]' LIMIT 1",
-		$dados['guarnicao'], $dados['pts'], $dados['salada'], $dados['sobremesa'], $dados['suco']);
-	else
-		query("INSERT INTO refeicoes VALUES (NULL, '?', ?, '?', '?', '?', '?', '?', NULL, 0)",
-			$dados['data'], $id, $dados['guarnicao'], $dados['pts'], $dados['salada'], $dados['sobremesa'], $dados['suco']);
-}
-
-// Define o campo 'proxima' da array
-// Recebe o cache de próximas (gerado por getCacheProximas())
-// Recebe o id da refeição a ser atualizada e sua array de dados
-function setProxima(&$cache, $id, &$dados) {
-	$inicio = $dados['data']->getInicio();
-	if ($inicio > $cache['max']) {
-		// É a última refeição
-		$dados['proxima'] = NULL;
-		// TODO: linkar da antiga NULL para essa
-	} else if (isset($cache[$dados['id']])) {
-		// Já tinha refeição nessa posição
 		
-	} else {
+		// Atualiza os links de próxima
+		$idRefeicao = Query::$conexao->insert_id;
+		$proxima = Query::getValor('SELECT id FROM refeicoes WHERE data>? ORDER BY data LIMIT 1', $dadosInsert['data']);
+		if ($proxima) {
+			new Query('UPDATE refeicoes SET proxima=? WHERE proxima=? LIMIT 1', $idRefeicao, $proxima);
+			new Query('UPDATE refeicoes SET proxima=? WHERE id=? LIMIT 1', $proxima, $idRefeicao);
+		} else
+			new Query('UPDATE refeicoes SET proxima=? WHERE proxima IS NULL LIMIT 1', $idRefeicao);
 	}
-}
-
-// Retorna um cache da relação de 'próxima' entre as últimas refeições
-function getCacheProximas() {
-	$cache = Query::query(false, NULL, 'SELECT id, data, proxima FROM refeicoes ORDER BY data DESC LIMIT 10');
-	$retorno = array();
-	$max = 0;
-	foreach ($cache as $cada) {
-		$data = new Data($cada['data']);
-		$max = max($max, $data->getInicio());
-		if ($cada['proxima'])
-			$retorno[$cada['proxima']] = $cada['id'];
-	}
-	$retorno['max'] = $max;
-	return $retorno;
 }

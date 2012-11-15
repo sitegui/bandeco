@@ -84,8 +84,6 @@ class Query {
 		$query .= substr($base, $ultimo);
 		
 		// Executa a query
-		if (isset($_GET['debug']))
-			echo "$query\n";
 		if (!(Query::$conexao instanceof MySQLi))
 			throw new ErrorException('Conexão não estabelecida');
 		if (!($this->result = Query::$conexao->query($query)))
@@ -207,6 +205,7 @@ class Query {
 	|true                      |"1"                 |"1"               |
 	|false                     |"0"                 |"0"               |
 	|NULL                      |"NULL"              |"NULL"            |
+	|new ClasseComToString()   |"'retornoToString'" |"retornoToString" |
 	+--------------------------+--------------------+------------------+
 	*/
 	private function prepararArg($valor) {
@@ -231,6 +230,8 @@ class Query {
 			return $valor ? '1' : '0';
 		else if (is_null($valor))
 			return 'NULL';
+		else if (is_object($valor))
+			return $this->prepararArg((string)$valor);
 		else
 			return (string)$valor;
 	}
