@@ -183,7 +183,7 @@ else if ($op == 'busca') {
 	
 	try {
 		$dados = Query::query(true, NULL, 'SELECT email, nome, chave FROM ouvintes WHERE ra=? LIMIT 1', $ra);
-		Email::enviar($dados['email'], Email::CHAVE, $dados);
+		Email::enviar($dados, $dados);
 		retornar(true);
 	} catch (Exception $e) {
 		retornar(false);

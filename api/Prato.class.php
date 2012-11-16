@@ -25,6 +25,25 @@ class Prato {
 		return $novo;
 	}
 	
+	// Retorna uma nota "média" entre o prato e a família
+	// Usado principalmente para prever a nota de um prato desconhecido
+	// Retorna NULL se não houver como calcular essa nota
+	public function getNotaMedia() {
+		$soma = 0;
+		$n = 0;
+		if ($this->nota !== NULL) {
+			$soma += 2*$this->nota;
+			$n += 2;
+		}
+		if ($this->familia !== NULL && $this->familia->nota !== NULL) {
+			$soma += $this->familia->nota;
+			$n++;
+		}
+		if ($n)
+			return $soma/$n;
+		return NULL;
+	}
+	
 	// Inicializa o prato com as informações da linha do banco de dados
 	private function __construct($base) {
 		global $_ra;

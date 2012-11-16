@@ -1,26 +1,29 @@
 <?php
 class Email {
-	// Constantes de formatos de e-mail
-	const CHAVE = 'chave'; // Recuperação de chave
-	const SEMANA = 'semana'; // Resumo do cardápio da semana
-	const RUIM = 'ruim'; // Prato mudou para um ruim
-	const BOM = 'bom'; // Prato mudou para um bom
-	
 	// Armazena os dados enviados, usados para preencher o molde
 	private static $dados = NULL;
 	
 	// Não pode instanciar
 	private function __construct() {}
 	
-	// Enviar e-mail nos formatos salvos no diretório emails/
-	// $destinatarios é:
-	//   um e-mail (string) ou
-	//   uma array em que cada elemento é:
-	//     um e-mail (string) ou
-	//     uma array com os índices nome e email
-	// $formato é uma das constantes da classe
+	// Envia e-mail para destinatarios com base num modelo
+	// $destinatarios é uma constante da classe Ouvinte ou uma array com os índices nome e email
 	// $dados é uma array associativa usada para substituir os valores no molde
-	public static function enviar($destinatarios, $formato, $dados) {
+	public static function enviar($destinatarios, $dados) {
+		// Carrega os destinatários
+		if (is_array($destinatarios)) {
+			$formato = 'chave';
+			$destinatarios = array($destinatarios);
+		} else {
+			switch ($destinatarios) {
+				case Ouvinte::BOM: $formato = 'bom'; break;
+				case Ouvinte::RUIM: $formato = 'ruim'; break;
+				case Ouvinte::SEMANA: $formato = 'semana'; break;
+				default: return;
+			}
+			$destinatarios = Query::query(false, NULL, 'SELECT nome, email FROM ouvintes WHERE avisos & ?', $destinatarios);
+		}
+		
 		if (empty($destinatarios))
 			// Nada a fazer
 			return;
@@ -47,19 +50,16 @@ class Email {
 		$mensagem = substr($mensagem, $pos+2);
 		
 		// Monta a lista de destinatarios
-		// TODO: dividir em grupos de cerca de 50 destinatários
 		$para = array();
-		if (is_array($destinatarios))
-			foreach ($destinatarios as $cada)
-				if (is_array($cada))
-					$para[] = '"' . ($cada['nome'] ? addslashes($cada['nome']) : $cada['email']) . '" <' . $cada['email'] . '>';
-				else
-					$para[] = $cada;
-		else
-			$para = array($destinatarios);
+		foreach ($destinatarios as $cada)
+			$para[] = '"' . ($cada['nome'] ? addslashes($cada['nome']) : $cada['email']) . '" <' . $cada['email'] . '>';
 		
-		// Envia
-		mail(implode(', ', $para), $assunto, $mensagem, "From: sitegui@sitegui.com.br\r\nContent-type: text/html; charset=UTF-8");
+		// Envia (em pacotes de 50)
+		$headers = "From: \"Bandeco - Sitegui\"<bandeco@sitegui.com.br>";
+		$headers .= "\r\nReply-To: \"Guilherme Souza\"<sitegui@sitegui.com.br>";
+		$headers .= "\r\nContent-type: text/html; charset=UTF-8";
+		for ($i=0; $i<count($para); $i+=50)
+			mail(implode(', ', array_slice($para, $i, 50)), $assunto, $mensagem, $headers);
 	}
 
 	// Função auxiliar para preencher o molde do email
