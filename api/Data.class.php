@@ -2,12 +2,28 @@
 // Representa uma data:
 // {dia: int, mes: int, ano: int, semana: int, almoco: boolean}
 class Data {
+	const SEMANA = 604800; // 1 semana, em segundos
+	const BASE = 1293926400; // 02/01/2011 00:00:00, domingo
+	
 	public $dia;
 	public $mes;
 	public $ano;
 	public $semana;
 	public $almoco;
-	public static $base = 1293926400; // 02/01/2011, domingo
+	
+	// Retorna a semana associada ao tempo enviado (padrão: time())
+	public static function getSemana($time=NULL) {
+		if ($time === NULL)
+			$time = time();
+		return floor(($time-Data::BASE)/Data::SEMANA);
+	}
+	
+	// Retorna o tempo de início da semana (padrão: essa semana)
+	public static function getInicioSemana($semana=NULL) {
+		if ($semana === NULL)
+			$semana = Data::getSemana();
+		return $semana*Data::SEMANA+Data::BASE;
+	}
 	
 	// Inicializa a data com cada componente, com uma string DATETIME do BD ou com uma array com cada componente:
 	// new Data('2012-11-15 12:00:00')
@@ -38,7 +54,7 @@ class Data {
 		$this->ano = (int)date('Y', $time);
 		
 		// Calcula a semana
-		$this->semana = floor(($time-Data::$base)/60/60/24/7);
+		$this->semana = Data::getSemana($time);
 	}
 	
 	// Retorna a data no formato DATETIME

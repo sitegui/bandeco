@@ -13,6 +13,7 @@ require_once 'Rank.class.php';
 require_once 'Refeicao.class.php';
 require_once 'Aviso.class.php';
 require_once 'Ouvinte.class.php';
+require_once 'Email.class.php';
 
 // Permite ser acessado por qualquer domínio
 header('Access-Control-Allow-Origin: *');
@@ -139,10 +140,10 @@ else if ($op == 'busca') {
 	retornar($pratos);
 } else if ($op == 'semana') {
 	// Retorna informações sobre os cardápios de uma semana
-	$semana = ler('GET', 'semana', 'int', floor((time()-Data::$base)/60/60/24/7));
+	$semana = ler('GET', 'semana', 'int', Data::getSemana());
 	
-	$inicio = date('Y-m-d H:i:s', Data::$base+$semana*7*24*60*60);
-	$fim = date('Y-m-d H:i:s', Data::$base+($semana+1)*7*24*60*60);
+	$inicio = date('Y-m-d H:i:s', Data::getInicioSemana($semana));
+	$fim = date('Y-m-d H:i:s', Data::getInicioSemana($semana+1));
 	
 	$refeicoes = array();
 	foreach (Query::query(false, NULL, 'SELECT * FROM refeicoes WHERE data>? AND data<? ORDER BY data', $inicio, $fim) as $cada)
@@ -182,7 +183,7 @@ else if ($op == 'busca') {
 	
 	try {
 		$dados = Query::query(true, NULL, 'SELECT email, nome, chave FROM ouvintes WHERE ra=? LIMIT 1', $ra);
-		enviarEmail($dados['email'], 'Chave', "$dados[nome], sua chave é $dados[chave]", 'From: sitegui@sitegui.com.br');
+		Email::enviar($dados['email'], Email::CHAVE, $dados);
 		retornar(true);
 	} catch (Exception $e) {
 		retornar(false);
@@ -280,10 +281,4 @@ function ler($origem, $nome, $tipo, $padrao=NULL) {
 		case 'usuario':	return getIdUsuario($valor); break;
 		default: return $valor;
 	}
-}
-
-// Envia o email
-function enviarEmail($email, $assunto, $mensagem) {
-	print_r(func_get_args());
-	mail($email, $assunto, $mensagem, "From: sitegui@sitegui.com.br\r\nContent-type: text/html; charset=UTF-8");
 }
