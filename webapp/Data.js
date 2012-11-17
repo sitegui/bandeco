@@ -28,6 +28,12 @@ Data.prototype.toString = function () {
 	return dia+"/"+mes+"/"+ano
 }
 
+// Retorna no formato dd/mm quando é o mesmo ano do atual, dd/mm/YYYY caso contrário
+Data.prototype.getResumido = function () {
+	var ano = new Date().getFullYear()
+	return this.ano==ano ? String(this).substr(0, 5) : String(this)
+}
+
 // Retorna no formato A-dd/mm/YYYY
 Data.prototype.getHash = function () {
 	return (this.almoco ? "A" : "J")+"-"+String(this)

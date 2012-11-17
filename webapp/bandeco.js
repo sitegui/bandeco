@@ -8,7 +8,7 @@ http://sitegui.com.br
 */
 
 var _url = "../api/", _dados = localStorage.getItem("bandecoDados")
-var _data = null
+var _data = null, _formOuvinte = null
 
 // Canal usado para as requisições GET
 var _canal = new CanalAjax
@@ -23,8 +23,8 @@ var _canal = new CanalAjax
 // - votos: armazena os votos ainda não enviados para o servidor (TODO: decidir formato)
 if (_dados != null)
 	_dados = JSON.parse(_dados)
-if (_dados == null || !("versao" in _dados) || _dados.versao != 3.1)
-	_dados = {versao: 3.1, ra: "", cache: {}, votos: []}
+if (_dados == null || !("versao" in _dados) || _dados.versao != 3.2)
+	_dados = {versao: 3.2, ra: "", cache: {}, votos: [], avisado: false}
 
 onbeforeunload = function () {
 	localStorage.setItem("bandecoDados", JSON.stringify(_dados))
@@ -36,7 +36,7 @@ onbeforeunload = function () {
 function pedirRA(forcar) {
 	var ra
 	if (!_dados.ra || forcar) {
-		ra = prompt("Qual seu RA?\n(Você precisa fornece-lo para poder votar nas refeições)", _dados.ra)
+		ra = prompt("Qual seu RA?\n(Você precisa fornecê-lo para poder votar nas refeições e ver resultados personalizados)", _dados.ra)
 		if (ra === null)
 			return false
 		_dados.ra = ra
@@ -48,18 +48,17 @@ function pedirRA(forcar) {
 function mostrarJanela(html) {
 	get("conteudoJanela").innerHTML = html
 	get("janela").style.display = ""
+	get("janela").scrollTop = 0
 }
 
-// TODO: implementar
-var mostrarRank, mostrarSemana
-
 // Inicia
-// TODO: Avisar que agora tem notificações por e-mail!
 onload = function () {
 	// Coloca os listeners nos botões
-	get("cog").onclick = Menu.abrir([["Ver ranking", mostrarRank], ["Mudar RA", function () {
+	get("cog").onclick = Menu.abrir([["Mudar RA", function () {
 		if (pedirRA(true))
 			mostrar()
+	}], ["Configurar avisos", function () {
+		configurarAvisos()
 	}], ["Gerar URL", gerarURL], ["Limpar dados", function () {
 		_dados.versao = 0
 		location.reload()
@@ -77,12 +76,33 @@ onload = function () {
 		var data = prompt("Digite a data desejada\n(dd ou dd/mm ou dd/mm/aaaa)", _data)
 		if (data)
 			irParaData(data)
+	}], ["Ver ranking", function () {
+		mostrarRanking()
 	}]])
 	
 	// Exibe o cardápio
 	_data = new Data
 	lerHash()
 	mostrar()
+	
+	// Copia o molde do form de ouvinte
+	_formOuvinte = get("formOuvinte")
+	_formOuvinte.parentNode.removeChild(_formOuvinte)
+	_formOuvinte.style.display = ""
+	
+	// Avisa da novidade
+	if (!_dados.avisado) {
+		setTimeout(function () {
+			var html
+			if (_dados.ra) {
+				html = "<p>Quer ser avisado por e-mail do cardápio da semana ou quando ele for alterado (pra melhor ou pior)?</p>"
+				html += "<p><span class='botao' onclick='configurarAvisos()'>Sim, configurar isso agora!</span><br>"
+				html += "<span class='botao' onclick='get(\"janela\").style.display=\"none\"' style='font-size:smaller'>Não, deixa pra depois...</span></p>"
+				mostrarJanela(html)
+				_dados.avisado = true
+			}
+		}, 45e3)
+	}
 }
 
 // Lê o comando inicial pela hash
@@ -98,6 +118,11 @@ function lerHash() {
 		if (hash[3]) _data.mes = Number(hash[3])
 		if (hash[4]) _data.ano = Number(hash[4])
 		_data.normalizar()
+		
+		// Abre o editor de avisos
+		if (hash[5])
+			configurarAvisos(hash[5])
+		
 		return true
 	}
 	return false
@@ -122,17 +147,53 @@ function irParaData(data) {
 	}
 }
 
-// Atualiza o cache da semana a cada 2 horas
+// Atualiza o cache da semana depois de 1 minuto e a cada 2 horas
 setInterval(function () {
+	// Atualiza o cache da semana
+	atualizarCacheSemana()
 	
+	// Atualiza a visão atual
+	_data = new Data
+	mostrar()
 }, 2*60*60*1e3)
+setTimeout(atualizarCacheSemana, 60*1e3)
+function atualizarCacheSemana() {
+	var canal = new CanalAjax
+	
+	// Gera funções para salvar o histórico
+	var salvar = function (refeicaoAlvo) {
+		return function (info) {
+			if (info !== null) {
+				refeicaoAlvo.historico = info.historico
+				refeicaoAlvo.rank = info.rank
+			}
+		}
+	}
+	
+	canal.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+		var i, data, refeicao, dados
+		for (i in refeicoes) {
+			refeicao = refeicoes[i]
+			data = new Data(refeicao.data)
+			refeicao.historico = refeicao.rank = null
+			_dados.cache[data.getHash()] = {refeicao: refeicao, tempo: Date.now(), ra: _dados.ra}
+			
+			// Atualiza o histórico e rank
+			dados = {prato: refeicao.prato.id, refeicoes: 5, ra: _dados.ra}
+			canal.enviar({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: salvar(refeicao)})
+		}
+		Aviso.avisar("Dados da semana atualizados", 5e3)
+	}, funcaoErro: function () {
+		Aviso.falhar("Falha na atualização", 5e3)
+	}})
+}
 
 // Exibe o cardápio (usa o valor global da _data)
 function mostrar() {
 	var dados, tempo = 0, diferenca, ra = "", cache
 	
 	// Atualiza a data da interface
-	get("data").textContent = (_data.almoco ? "Almoço" : "Janta")+" de "+_data.getDiaSemana()+" ("+_data+")"
+	get("data").textContent = (_data.almoco ? "Almoço" : "Janta")+" de "+_data.getDiaSemana()+" ("+_data.getResumido()+")"
 	
 	// Busca no cache
 	if (_data.getHash() in _dados.cache) {
@@ -166,6 +227,7 @@ function mostrar() {
 			}
 		}, funcaoErro: function () {
 			Aviso.falhar("Falha na conexão", 3e3)
+			exibirRefeicao(null)
 		}})
 	}
 }
@@ -237,13 +299,16 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 // Os dados devem estar nas propriedades "historico" e "rank" do parâmetro
 function montarHistorico(refeicao) {
 	var i, html = [], nota, data
+	if (refeicao.historico === null || refeicao.rank === null)
+		return;
+	
 	for (i=0; i<refeicao.historico.length; i++) {
 		if (refeicao.historico[i].id == refeicao.id)
 			continue;
 		nota = refeicao.historico[i].nota
 		data = new Data(refeicao.historico[i].data)
-		html.push("<span title='Em "+data.ano+", "+(nota===null ? "sem nota" : "nota: "+nota)+"' class='botao' onclick='irParaData(\""+data.getHash()+"\")'>"+
-			data.dia+"/"+data.mes+" "+(data.almoco ? "no almoço" : "na janta")+"</span>")
+		html.push("<span title='"+(nota===null ? "Sem nota" : "Nota: "+nota)+"' class='botao' onclick='irParaData(\""+data.getHash()+"\")'>"+
+			data.getResumido()+" "+(data.almoco ? "no almoço" : "na janta")+"</span>")
 	}
 	get("historico").innerHTML = html.length ? "Histórico: "+html.join(", ") : "Histórico desconhecido"
 	
@@ -343,84 +408,136 @@ onkeydown = function (e) {
 		voltar()
 }
 
-/*
-setInterval(function () {
-	if (navigator.onLine) {
-		if (ajax)
-			ajax.abortar()
-		ajax = Ajax({url: url+"cardapio?ra="+dados.ra,
-		retorno: "json",
-		funcao: montar,
-		funcaoErro: function () {
-			document.body.style.cursor = ""
-		}})
-		dados.delta = 0
-		document.body.style.cursor = "progress"
-	}
-}, 3600e3)
-
 // Mostra o cardápio da semana
 function mostrarSemana() {
-	document.body.style.cursor = "progress"
-	if (ajax)
-		ajax.abortar()
-	ajax = Ajax({url: url+"semana",
-	dados: {ra: dados.ra},
-	retorno: "json",
-	funcao: function (refeicoes) {
-		var i, data, data2, html = "<br><table><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
-		document.body.style.cursor = ""
-		for (i=0; i<refeicoes.length; i++) {
-			data = new Date(refeicoes[i].data.ano, refeicoes[i].data.mes-1, refeicoes[i].data.dia, 15, 0, 0, 0)
-			data = dias[data.getDay()]
-			data2 = refeicoes[i].data.dia.getCom2Digitos()+"/"+refeicoes[i].data.mes.getCom2Digitos()
-			html += "<tr><td>"+(refeicoes[i].data.almoco ? "Almoço" : "Janta")+" de "+data+" <span style='font-size:smaller'>("+data2+")</span></td>"
+	Ajax({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+		var i, refeicao, data, nota, html = "<br><table><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
+		for (i in refeicoes) {
+			refeicao = refeicoes[i]
+			data = new Data(refeicao.data)
+			html += "<tr><td>"+(refeicoes[i].data.almoco ? "Almoço" : "Janta")+" de "+data.getDiaSemana()+" <span style='font-size:smaller'>("+data.getResumido()+")</span></td>"
 			html += "<td>"+refeicoes[i].prato.nome.upperCaseFirst()+"</td>"
-			if (refeicoes[i].prato.numVotos)
-				html += "<td title='"+refeicoes[i].prato.numVotos+" votos'>"+Math.round(refeicoes[i].prato.nota*100)/100+" "+imgTag(refeicoes[i].prato.nota)+
-				"</td>"
-			else
+			nota = getNotaMedia(refeicao.prato)
+			if (nota === null)
 				html += "<td>-</td>"
+			else
+				html += "<td title='"+refeicao.prato.numVotos+" votos nesse prato'>"+nota.toFixed(1)+" "+imgTag(nota)+"</td>"
 			html += "<td>"+refeicoes[i].sobremesa.upperCaseFirst()+"</td></tr>"
 		}
-		mostrarJanela(html)
-	},
-	funcaoErro: function () {
-		document.body.style.cursor = ""
-		alert("Erro na conexão")
+		mostrarJanela("</table>"+html)
+	}, funcaoErro: function () {
+		Avis.falhar("Erro na conexão", 3e3)
 	}})
 }
 
 // Mostra o rank dos pratos
-function mostrarRank() {
-	document.body.style.cursor = "progress"
-	if (ajax)
-		ajax.abortar()
-	ajax = Ajax({url: url+"ranking",
-	dados: {ra: dados.ra, quantidade: 50},
-	retorno: "json",
-	funcao: function (pratos) {
-		var i, html = "<br><table><tr><td>Pos</td><td>Prato</td><td>Nota</td></tr>"
-		document.body.style.cursor = ""
-		for (i=0; i<pratos.length; i++) {
-			html += "<tr><td>"+(i+1)+"º</td><td>"+pratos[i].nome.upperCaseFirst()+"</td><td title='"+pratos[i].numVotos+" votos'>"+Math.round(pratos[i].nota*100)/100+
-			"</td></tr>"
+function mostrarRanking(pagina) {
+	pagina = pagina || 0
+	Ajax({url: _url+"ranking", dados: {inicio: pagina*50, quantidade: 50, ra: _dados.ra}, retorno: "JSON", funcao: function (pratos) {
+		var i, prato, nota, html = "<br><table><tr><td>Pos</td><td>Prato</td><td>Nota</td></tr>"
+		if (pratos.length == 0) {
+			Aviso.falhar("Sem mais dados", 3e3)
+			return
 		}
+		for (i in pratos) {
+			prato = pratos[i]
+			nota = getNotaMedia(prato)
+			html += "<tr><td>"+(pagina*50+Number(i)+1)+"º</td><td>"+prato.nome.upperCaseFirst()+"</td>"
+			html += "<td title='"+pratos[i].numVotos+" votos nesse prato'>"+nota.toFixed(1)+" "+imgTag(nota)+"</td></tr>"
+		}
+		html += "</table>"
+		if (pratos.length == 50)
+			html += "<br><span class='botao' onclick='mostrarRanking("+(pagina+1)+")'>Ver mais</span>"
 		mostrarJanela(html)
-	},
-	funcaoErro: function () {
-		document.body.style.cursor = ""
-		alert("Erro na conexão")
+	}, funcaErro: function () {
+		Aviso.falhar("Erro na conexão", 3e3)
 	}})
 }
 
-// Vai para uma refeição do histórico
-function irHistorico(i) {
-	montar(dados.info.historico[i], true)
+// Abre a janela para configurar o ouvinte do usuário atual
+function configurarAvisos(chave) {
+	var html = "<p>Agora você pode ser avisado por e-mail quando o cardápio da semana ficar disponível ou quando ele for alterado</p>"
+	
+	// Pede o RA
+	if (!_dados.ra) {
+		html += "<p>Para continuar, <span class='botao' onclick='pedirRA();configurarAvisos()'>informe seu RA</span></p>"
+		mostrarJanela(html)
+		return
+	}
+	
+	_dados.avisado = true
+	if (!chave) {
+		// Verifica se precisa de chave
+		Ajax({url: _url+"pedirChave", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (precisa) {
+			var form
+			if (precisa)
+				mostrarJanela("<p>Um link foi enviado para seu e-mail, clique nele para continuar</p>")
+			else {
+				html += "<p>Informe seus dados:</p>"
+				mostrarJanela(html)
+				form = _formOuvinte.cloneNode(true)
+				get("conteudoJanela").appendChild(form)
+			}
+		}, funcaoErro: function () {
+			Aviso.falhar("Falha na conexão", 3e3)
+		}, metodo: "POST"})
+		return
+	}
+	
+	// Abre o formulário de edição
+	Ajax({url: _url+"getOuvinte", dados: {chave: chave}, retorno: "JSON", funcao: function (ouvinte) {
+		var form, html
+		if (ouvinte === null) {
+			Aviso.falhar("Chave incorreta", 3e3)
+			return
+		}
+		html = "<p>Editando os dados do RA "+ouvinte.ra+"</p>"
+		mostrarJanela(html)
+		form = _formOuvinte.cloneNode(true)
+		get("conteudoJanela").appendChild(form)
+		get("avisoNome").value = ouvinte.nome
+		get("avisoEmail").value = ouvinte.email
+		get("avisoChave").value = chave
+		get("checkSemana").checked = ouvinte.avisos & 1
+		get("checkRuim").checked = ouvinte.avisos & 2
+		get("checkBom").checked = ouvinte.avisos & 4
+	}, funcaoErro: function () {
+		Aviso.falhar("Falha na conexão", 3e3)
+	}})
+}
+
+// Salva as definições do ouvinte
+function salvarOuvinte() {
+	var nome, email, avisos = 0, chave, dados
+	
+	// Pega os valores
+	nome = get("avisoNome").value
+	email = get("avisoEmail").value
+	chave = get("avisoChave").value
+	if (get("checkSemana").checked) avisos += 1
+	if (get("checkRuim").checked) avisos += 2
+	if (get("checkBom").checked) avisos += 4
+	get("janela").style.display = "none"
+	
+	// Salva
+	dados = {ra: _dados.ra, nome: nome, email: email, avisos: avisos, chave: chave}
+	Ajax({url: _url+"setOuvinte", dados: dados, retorno: "JSON", funcao: function (sucesso) {
+		if (sucesso)
+			Aviso.avisar("Dados salvos com sucesso", 1e3)
+		else
+			Aviso.falhar("Dados inconsistentes", 3e3)
+	}, funcaoErro: function () {
+		Aviso.falhar("Falha na conexão", 3e3)
+	}, metodo: "POST"})
+	
+	// Exclui o form da página
+	get("conteudoJanela").removeChild(get("formOuvinte"))
 }
 
 // Vota na refeição
 function votar(num) {
+	// TODO: implementar
+	/*
 	if (!dados.refeicaoAtual.podeVotar || !pedirRA())
 		return;
 	document.body.style.cursor = "progress"
@@ -433,22 +550,5 @@ function votar(num) {
 		if (resultado) {
 			carregar()
 		}
-	}})
+	}})*/
 }
-
-// Carrega a refeição com base no "delta" global
-function carregar() {
-	document.body.style.cursor = "progress"
-	if (ajax)
-		ajax.abortar()
-	ajax = Ajax({url: url+"cardapio",
-	dados: {delta: dados.delta, ra: dados.ra},
-	retorno: "json",
-	funcao: montar,
-	funcaoErro: function () {
-		dados.delta -= sentido
-		document.body.style.cursor = ""
-		alert("Erro na conexão")
-	}})
-}
-*/

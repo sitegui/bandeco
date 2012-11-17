@@ -30,9 +30,12 @@ img {
 .botao {
 	cursor:pointer;
 	padding:3px;
+	display:inline-block;
+	border-radius:3px;
+	border-bottom:thin rgba(0,0,0,.25) solid;
+	border-right:thin rgba(0,0,0,.25) solid;
 }
 .botao:hover {
-	border-radius:3px;
 	box-shadow:0px 0px 2px 0px black;
 }
 .destaque {
@@ -141,9 +144,19 @@ td {
 <div id="historico"></div>
 <div id="status" class="escondido"></div>
 <div id="janela" style="display:none">
-	<img src="cross.png" class="botao" onclick="document.getElementById('janela').style.display='none'"><br>
+	<img src="cross.png" class="botao" onclick="get('janela').style.display='none'"><br>
 	<br>
 	<div id="conteudoJanela"></div>
 </div>
+<form id="formOuvinte" style="display:none" onSubmit="salvarOuvinte(); return false">
+<input type="hidden" id="avisoChave">
+<label for="avisoNome">Nome:</label> <input id="avisoNome" size="30" required><br>
+<label for="avisoEmail">Email:</label> <input type="email" id="avisoEmail" size="30" required><br>
+Avisos desejados:<br>
+<input type="checkbox" id="checkSemana" checked> <label for="checkSemana">Cardápio da semana</label><br>
+<input type="checkbox" id="checkRuim" checked> <label for="checkRuim">Troca para um prato ruim e pior</label><br>
+<input type="checkbox" id="checkBom" checked> <label for="checkBom">Troca para um prato bom e melhor</label><br>
+<input type="submit" value="Cadastrar">
+</form>
 </body>
 </html>

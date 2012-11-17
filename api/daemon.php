@@ -13,6 +13,8 @@ require_once 'Ouvinte.class.php';
 
 set_time_limit(90);
 
+// TODO: salvar os avisos no banco de dados
+
 // Atualiza os pratos
 $pag = 1;
 while ($dados = extrair($pag++)) {
