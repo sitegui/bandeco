@@ -18,7 +18,6 @@ CREATE  TABLE IF NOT EXISTS `bandeco`.`familias` (
   PRIMARY KEY (`id`) ,
   UNIQUE INDEX `nome` (`nome` ASC) )
 ENGINE = InnoDB
-AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8
 COMMENT = 'Armazena as famílias de pratos';
 
@@ -43,7 +42,6 @@ CREATE  TABLE IF NOT EXISTS `bandeco`.`pratos` (
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 167
 DEFAULT CHARACTER SET = utf8
 COMMENT = 'Guarda os diferentes pratos';
 
@@ -73,7 +71,6 @@ CREATE  TABLE IF NOT EXISTS `bandeco`.`refeicoes` (
     ON DELETE RESTRICT
     ON UPDATE CASCADE)
 ENGINE = InnoDB
-AUTO_INCREMENT = 403
 DEFAULT CHARACTER SET = utf8
 COMMENT = 'Armazena todas as refeições';
 
@@ -126,7 +123,7 @@ DROP TABLE IF EXISTS `bandeco`.`avisos` ;
 
 CREATE  TABLE IF NOT EXISTS `bandeco`.`avisos` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Id do aviso' ,
-  `tipo` TINYINT UNSIGNED NOT NULL COMMENT 'Tipo do aviso' ,
+  `tipo` TINYINT NOT NULL COMMENT 'Tipo do aviso (-1, 0, ou 1)' ,
   `refeicao` INT UNSIGNED NOT NULL COMMENT 'Faz referência à refeição que gerou o aviso' ,
   `data` DATETIME NOT NULL COMMENT 'Indica quando o aviso foi gerado' ,
   INDEX `refeicao_idx` (`refeicao` ASC) ,

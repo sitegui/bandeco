@@ -13,8 +13,6 @@ require_once 'Ouvinte.class.php';
 
 set_time_limit(90);
 
-// TODO: salvar os avisos no banco de dados
-
 // Atualiza os pratos
 $pag = 1;
 while ($dados = extrair($pag++)) {
@@ -43,9 +41,11 @@ while ($dados = extrair($pag++)) {
 		$dados = array('antes' => json_encode($pratoAntes), 'depois' => json_encode($pratoDepois));
 		if ($notaDepois < -.5 && $notaDepois < $notaAntes) {
 			// Prato ficou ruim
+			new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (-1, ?, NOW())', $idRefeicao);
 			Email::enviar(Ouvinte::RUIM, $dados);
 		} else if ($notaDepois > .5 && $notaDepois > $notaAntes) {
 			// Prato ficou bom
+			new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (1, ?, NOW())', $idRefeicao);
 			Email::enviar(Ouvinte::BOM, $dados);
 		}
 		
@@ -103,6 +103,7 @@ if ($semanaAtual > $ultimaSemana) {
 	Email::enviar(Ouvinte::SEMANA, $dados);
 	
 	// Salva
+	new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (0, ?, NOW())', $refeicoes[0]->id);
 	$ultimaSemana = $semanaAtual;
 	file_put_contents('ultimaSemana.txt', $ultimaSemana);
 }

@@ -20,11 +20,10 @@ var _canal = new CanalAjax
 // - cache: guarda o cache, indexando pela data (Data.prototype.getHash())
 //          cada elemento é um objeto com três índices: "refeicao", "tempo" e "ra"
 //          "refeicao" é uma refeição com os índices "historico" e "rank" adicionados
-// - votos: armazena os votos ainda não enviados para o servidor (TODO: decidir formato)
 if (_dados != null)
 	_dados = JSON.parse(_dados)
-if (_dados == null || !("versao" in _dados) || _dados.versao != 3.2)
-	_dados = {versao: 3.2, ra: "", cache: {}, votos: [], avisado: false}
+if (_dados == null || !("versao" in _dados) || _dados.versao != 3)
+	_dados = {versao: 3, ra: "", cache: {}, avisado: false}
 
 onbeforeunload = function () {
 	localStorage.setItem("bandecoDados", JSON.stringify(_dados))
@@ -536,19 +535,25 @@ function salvarOuvinte() {
 
 // Vota na refeição
 function votar(num) {
-	// TODO: implementar
-	/*
-	if (!dados.refeicaoAtual.podeVotar || !pedirRA())
+	var refeicao = _dados.cache[_data.getHash()].refeicao, dados
+	
+	if (!podeVotar(refeicao) || !pedirRA())
 		return;
-	document.body.style.cursor = "progress"
-	Ajax({url: url+"votar",
-	dados: {refeicao: dados.refeicaoAtual.id, ra: dados.ra, voto: num},
-	metodo: "POST",
-	retorno: "json",
-	funcao: function (resultado) {
-		document.body.style.cursor = ""
-		if (resultado) {
-			carregar()
-		}
-	}})*/
+	
+	dados = {refeicao: refeicao.id, ra: _dados.ra}
+	if (refeicao.notaPessoal != num)
+		dados.voto = num
+	else
+		num = null
+	
+	Ajax({url: _url+"votar", dados: dados, retorno: "JSON", funcao: function (ok) {
+		if (ok) {
+			Aviso.avisar("Voto registrado", 1e3)
+			refeicao.notaPessoal = num
+			mostrar()
+		} else
+			Aviso.falhar("Voto inválido", 3e3)
+	}, funcaoErro: function () {
+		Aviso.falhar("Falha na conexão", 3e3)
+	}, metodo: "POST"})
 }
