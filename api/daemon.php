@@ -52,15 +52,6 @@ while ($dados = extrair($pag++)) {
 		$dadosInsert = $dados;
 		$dadosInsert['data'] = (string)$dadosInsert['data'];
 		new Query('INSERT INTO refeicoes SET ?', $dadosInsert);
-		
-		// Atualiza os links de próxima
-		$idRefeicao = Query::$conexao->insert_id;
-		$proxima = Query::getValor('SELECT id FROM refeicoes WHERE data>? ORDER BY data LIMIT 1', $dadosInsert['data']);
-		if ($proxima) {
-			new Query('UPDATE refeicoes SET proxima=? WHERE proxima=? LIMIT 1', $idRefeicao, $proxima);
-			new Query('UPDATE refeicoes SET proxima=? WHERE id=? LIMIT 1', $proxima, $idRefeicao);
-		} else
-			new Query('UPDATE refeicoes SET proxima=? WHERE proxima IS NULL LIMIT 1', $idRefeicao);
 	}
 }
 

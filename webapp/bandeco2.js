@@ -1,91 +1,111 @@
 /*
 
 Bandeco
-Versão 3.0 - 16/11/2012
+Versão 2.3.1 - 15/05/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
 */
 
-var _url = "http://sitegui.com.br/apis/bandeco2/", _dados = localStorage.getItem("bandecoDados")
-var _data = null
-
-// Canal usado para as requisições GET
-var _canal = new CanalAjax
+var url = "http://sitegui.com.br/apis/bandeco/", dados = localStorage.getItem("bandecoDados"), sentido = 0, ajax, dias
+dias = "domingo,segunda,terça,quarta,quinta,sexta,sábado".split(",")
 
 // Armazena todos os dados da aplicação
-if (_dados != null)
-	_dados = JSON.parse(_dados)
-if (_dados == null || !("versao" in _dados) || _dados.versao != 3.1)
-	_dados = {versao: 3.1, ra: "", cache: {}, votos: []}
+if (dados == null)
+	dados = {delta: 0, ra: "", refeicaoAtual: null, info: null}
+else
+	dados = JSON.parse(dados)
 
-onbeforeunload = function () {
-	localStorage.setItem("bandecoDados", JSON.stringify(_dados))
+function salvarDados() {
+	localStorage.setItem("bandecoDados", JSON.stringify(dados))
 }
+onbeforeunload = salvarDados
 
 // Pede pelo RA da pessoa
 // Se forcar for true, força o pedido do RA (mesmo quando já foi informado)
-// Retorna false caso o RA não tenha sido fornecido
 function pedirRA(forcar) {
 	var ra
-	if (!_dados.ra || forcar) {
-		ra = prompt("Qual seu RA?\n(Você precisa fornece-lo para poder votar nas refeições)", _dados.ra)
+	if (!dados.ra || forcar) {
+		ra = prompt("Qual seu RA?\n(Você precisa fornece-lo para poder votar nas refeições)", dados.ra)
 		if (ra === null)
 			return false
-		_dados.ra = ra
+		dados.ra = ra
 	}
+	if (forcar)
+		carregar()
 	return true
 }
 
 // Mostra a janela
 function mostrarJanela(html) {
-	get("conteudoJanela").innerHTML = html
-	get("janela").style.display = ""
+	document.getElementById("janela").innerHTML = "<span class='botao' onclick='document.getElementById(\"janela\").style.display=\"none\"'>Fechar</span><br>"+html
+	document.getElementById("janela").style.display = "block"
 }
 
-// TODO: implementar
-var mostrarRank, mostrarSemana
+
+// Abre um menu
+// Recebe uma array com cada elementos sendo uma array do tipo [string nome, callback funcao]
+// evento é o evento de clique
+var divMenu = null
+function menu(opcoes, evento) {
+	var i, subdiv, fechar
+	
+	// Monta a div
+	menu.fechar()
+	divMenu = document.createElement("div")
+	divMenu.classList.add("menu")
+	document.body.appendChild(divMenu)
+	
+	// Insere os botões
+	for (i=0; i<opcoes.length; i++) {
+		subdiv = document.createElement("div")
+		subdiv.innerHTML = opcoes[i][0]
+		subdiv.onclick = opcoes[i][1]
+		divMenu.appendChild(subdiv)
+	}
+	
+	// Posiciona
+	if (evento.pageX+divMenu.offsetWidth > document.body.offsetWidth)
+		divMenu.style.left = (evento.pageX-divMenu.offsetWidth)+"px"
+	else
+		divMenu.style.left = evento.pageX+"px"
+	if (evento.pageY+divMenu.offsetHeight > document.body.offsetHeight)
+		divMenu.style.top = (evento.pageY-divMenu.offsetHeight)+"px"
+	else
+		divMenu.style.top = evento.pageY+"px"
+	
+	evento.stopPropagation()
+}
+menu.fechar = function () {
+	if (divMenu) {
+		document.body.removeChild(divMenu)
+		divMenu = null
+	}
+}
 
 // Inicia
 onload = function () {
-	var hash
-	
+	document.body.addEventListener("click", menu.fechar)
+
 	// Coloca os listeners nos botões
-	get("cog").onclick = Menu.abrir([["Ver ranking", mostrarRank], ["Mudar RA", function () {
-		pedirRA(true)
-		// TODO: recarregar tudo
-	}], ["Gerar URL", gerarURL]])
-	get("help").onclick = Menu.abrir([["Sobre", function () {
-		mostrarJanela(get("sobre").innerHTML)
-	}], ["Fale Conosco", function () {
-		window.open("http://sitegui.com.br/fale_conosco/?assunto=bandeco", "janelaFaleConosco", "width=500,height=500")
-	}], ["Sitegui", function () {
-		window.open("http://sitegui.com.br")
-	}], ["API Bandeco", function () {
-		window.open("http://sitegui.com.br/apis/bandeco")
-	}]])
-	get("data").onclick = Menu.abrir([["Ver semana", mostrarSemana], ["Ir para data", function () {
-		// TODO: perguntar a data
-	}]])
-	
-	// Lê o comando inicial pela hash
-	// Formato de exemplo: #J-16/11/2012;tpjfiOrqzOUgrjbi8B85
-	// A chave é usada para configurar as opções de aviso
-	// A data pode estar incompleta da direita para a esquerda
-	hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(.{20}))?$/i)
-	_data = new Data
-	if (hash) {
-		if (hash[1]) _data.almoco = hash[1].toUpperCase()=="A"
-		if (hash[2]) _data.dia = Number(hash[2])
-		if (hash[3]) _data.mes = Number(hash[3])
-		if (hash[4]) _data.ano = Number(hash[4])
-		_data.normalizar()
+	document.getElementById("cog").onclick = function (e) {
+		menu([["Ver ranking", mostrarRank], ["Ver semana", mostrarSemana], ["Mudar RA", function () {
+			pedirRA(true)
+		}]], e)
+	}
+	document.getElementById("help").onclick = function (e) {
+		menu([["Sobre", function () {
+			mostrarJanela(document.getElementById("sobre").innerHTML)
+		}], ["Fale Conosco", function () {
+			window.open("http://sitegui.com.br/fale_conosco/?assunto=bandeco", "janelaFaleConosco", "width=500,height=500")
+		}], ["Sitegui", function () {
+			window.open("http://sitegui.com.br")
+		}], ["API Bandeco", function () {
+			window.open("http://sitegui.com.br/apis/bandeco")
+		}]], e)
 	}
 	
-	// Exibe o cardápio
-	mostrar()
-	
-	/*/ Carrega o cenário inicial
+	// Carrega o cenário inicial
 	var hash = verHash()
 	if (dados.refeicaoAtual)
 		montar(dados.refeicaoAtual, true)
@@ -101,105 +121,8 @@ onload = function () {
 		}})
 		dados.delta = 0
 		document.body.style.cursor = "progress"
-	}*/
-}
-
-// Exibe o cardápio (usa o valor global da data)
-function mostrar() {
-	var dados, tempo = 0, diferenca
-	
-	// Atualiza a data da interface
-	get("data").textContent = (_data.almoco ? "Almoço" : "Janta")+" de "+_data.getDiaSemana()+" ("+_data+")"
-	
-	// Busca no cache
-	if (_data.getHash() in _dados.cache) {
-		tempo = _dados.cache[_data.getHash()].tempo
-		Aviso.avisar("Atualizado "+tempo2String(tempo), 1e3)
-		exibirRefeicao(_dados.cache[_data.getHash()].refeicao)
-	}
-	
-	if (Date.now()-tempo > 30*60*1e3) {
-		// Busca a versão atualizada
-		dados = {dia: _data.dia, mes: _data.mes, ano: _data.ano, almoco: _data.almoco, ra: _dados.ra}
-		_canal.enviarDireto({url: _url+"cardapio", dados: dados, retorno: "JSON", funcao: function (refeicao) {
-			var data
-			if (refeicao === null)
-				// Sem mais dados
-				Aviso.falhar("Nenhuma refeição mais", 3e3)
-			else {
-				data = new Data(refeicao.data.dia, refeicao.data.mes, refeicao.data.ano)
-				if (data.getHash() != _data.getHash())
-					// Não é o que foi pedido, descarta
-					refeicao = null
-				
-				// Armazena e exibe
-				_dados.cache[_data.getHash()] = {refeicao: refeicao, tempo: Date.now()}
-				exibirRefeicao(refeicao)
-				Aviso.avisar("Atualizado!", 1e3)
-			}
-		}, funcaoErro: function () {
-			Aviso.falhar("Falha na conexão", 3e3)
-		}})
 	}
 }
-
-// Mostra todos os dados da refeição na interface
-function exibirRefeicao(refeicao) {
-	if (refeicao === null)
-		get("principal").innerHTML = "<em>Sem nada</em>"
-	else
-		get("principal").textContent = refeicao.prato.nome
-}
-
-// Forma uma URL direto para essa página
-function gerarURL() {
-	var html, url
-	url = location.protocol+"//"+location.host+location.pathname+"#"+_data.getHash()
-	html = "Essa URL irá trazer direto para o cardápio do dia "+_data+":<br><span id='tempInput'>"+url+"</span>"
-	mostrarJanela(html)
-	setTimeout(function () {
-		var range = document.createRange()
-		range.selectNode(get("tempInput"))
-		getSelection().removeAllRanges()
-		getSelection().addRange(range)
-	}, 100)
-}
-
-// Atalho para document.getElementById
-function get(id) {
-	return document.getElementById(id)
-}
-
-// Transforma um valor de tempo em uma string facilmente entendível
-// Date.now()-60e3 => "há 1 minuto"
-function tempo2String(tempo) {
-	var s = Math.floor((Date.now()-tempo)/1e3)
-	var min = Math.floor(s/60)
-	var h = Math.floor(min/60)
-	var dia = Math.floor(h/24)
-	s %= 60
-	min %= 60
-	h %= 24
-	if (dia > 0)
-		return "há "+dia+" dia"+(dia==1 ? "" : "s")
-	else if (h > 0)
-		return "há "+h+" hora"+(h==1 ? "" : "s")
-	else if (min > 0)
-		return "há "+min+" minuto"+(min==1 ? "" : "s")
-	return "há "+s+" segundo"+(s==1 ? "" : "s")
-}
-
-// Avança e retorna no tempo
-function avancar() {
-	_data.avancar()
-	mostrar()
-}
-function voltar() {
-	_data.voltar()
-	mostrar()
-}
-
-/*
 setInterval(function () {
 	if (navigator.onLine) {
 		if (ajax)
@@ -299,6 +222,11 @@ Object.defineProperty(Number.prototype, "getCom2Digitos", {value: function () {
 	return s.length<2 ? "0"+s : s
 }})
 
+// Atalho para document.getElementById
+function get(id) {
+	return document.getElementById(id)
+}
+
 // Retorna a tag HTML para a imagem do smile que representa a nota dada
 function imgTag(nota) {
 	nota = Math.round(nota)
@@ -368,7 +296,7 @@ function montar(refeicao, veioDoHistorico) {
 		return
 	}
 	get("historico").innerHTML = "..."
-	ajax = Ajax({url: url+"infoPrato",
+	ajax = Ajax({url: url+"info",
 	dados: {prato: refeicao.prato.id, ra: dados.ra},
 	retorno: "json",
 	funcao : montarPrato})
@@ -446,4 +374,3 @@ function voltar() {
 	dados.delta--
 	carregar()
 }
-*/

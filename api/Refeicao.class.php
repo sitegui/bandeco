@@ -1,7 +1,7 @@
 <?php
 // Representa uma refeição:
-// {id: int, data: Data, prato: Prato, guarnicao: string(100), pts: string(100), salada: string(100), sobremesa: string(100),
-//  suco: string(100), nota*: number, notaPessoal*: int, podeVotar: boolean, numVotos: int, proxima*: int, anterior*: int}
+// {id: int, data: Data, prato: Prato, guarnicao: string(100), pts: string(100), salada: string(100),
+//  sobremesa: string(100), suco: string(100), nota*: number, notaPessoal*: int, podeVotar: boolean, numVotos: int}
 class Refeicao {
 	public $id;
 	public $data;
@@ -15,8 +15,6 @@ class Refeicao {
 	public $notaPessoal = NULL;
 	public $podeVotar;
 	public $numVotos;
-	public $proxima;
-	public $anterior;
 	
 	// Inicializa a refeição com as informações da linha do banco de dados
 	public function __construct($base) {
@@ -32,7 +30,6 @@ class Refeicao {
 		$this->suco = $base['suco'];
 		$this->nota = $base['nota'];
 		$this->numVotos = $base['votos'];
-		$this->proxima = $base['proxima'];
 		
 		// Extrai as informações da data
 		$this->data = new Data($base['data']);
@@ -48,12 +45,5 @@ class Refeicao {
 			} catch (Exception $e) {
 				$this->notaPessoal = NULL;
 			}
-		
-		// Pega o id da refeição anterior
-		try {
-			$this->anterior = Query::query(true, 0, 'SELECT id FROM refeicoes WHERE proxima=? LIMIT 1', $this->id);
-		} catch (Exception $e) {
-			$this->anterior = NULL;
-		}
 	}
 }

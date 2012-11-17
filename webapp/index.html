@@ -1,22 +1,27 @@
 <!DOCTYPE HTML>
-<html manifest="bandeco.cache">
+<html manifest="nao-bandeco.cache">
 <head>
 <!--
 
 Bandeco
-Versão 2.3.1 - 15/05/2012
+Versão 3.0 - 16/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
 -->
 <meta charset="utf-8">
-<title>Bandeco Web App (Versão 2.3.1 - 15/05/2012)</title>
+<meta name="viewport" content="width=450px">
+<title>Bandeco Web App (Versão 3.0 - 16/11/2012)</title>
 <link rel="icon" href="icone.png">
-<script src="ajax.js"></script>
+<script src="ajax.2.0.js"></script>
+<script src="Aviso.js"></script>
+<script src="Menu.js"></script>
+<script src="Data.js"></script>
 <script src="bandeco.js"></script>
 <style>
 body {
 	font-family:Verdana, Geneva, sans-serif;
+	padding-top:5px;
 }
 img {
 	border:none;
@@ -24,10 +29,11 @@ img {
 }
 .botao {
 	cursor:pointer;
+	padding:3px;
 }
 .botao:hover {
 	border-radius:3px;
-	box-shadow:0 0 2px 0 black;
+	box-shadow:0px 0px 2px 0px black;
 }
 .destaque {
 	border-radius:5px;
@@ -36,7 +42,7 @@ img {
 }
 #data {
 	display:inline-block;
-	width:250px;
+	width:300px;
 	text-align:center;
 }
 #principal {
@@ -81,22 +87,45 @@ td {
 	top:10%;
 	background-color:white;
 }
-p {
-	text-indent:2em;
+#status {
+	background-color:#CFC;
+	border-bottom-left-radius:10px;
+	border-bottom-right-radius:10px;
+	width:250px;
+	position:absolute;
+	top:-1px;
+	left:100px;
+	border:thin #9F9 solid;
+	font-size:x-small;
+	padding:2px;
+	height:14px;
+	text-align:center;
+	color:#333;
+	overflow:hidden;
+	transition-property:top, background-color, border-color;
+	transition-duration:.5s;
+	transition-timing-function:ease;
+}
+.falha#status {
+	background-color:#F99;
+	border-color:#F66;
+}
+.escondido#status {
+	top:-20px;
 }
 </style>
 </head>
 
 <body>
 <div id="sobre" style="display:none">
-	<h2>Bandeco Web App (Versão 2.3.1 - 15/05/2012)</h2>
+	<h2>Bandeco Web App (Versão 3.0 - 16/11/2012)</h2>
 	<p>Este é um aplicativo Web que permite não apenas ver o cardápio do Bandeco (ou bandex), mas também dar seu voto após cada refeição, formando um grande histórico de todos os pratos, facilitando a indecisão eterna de ir no bandeco ou outro lugar.</p>
 	<p>O voto vai de -2 a 2 (positivo é comestível, negativo é tenso...). Escolhi essa escala pois algumas vezes o bandeco não merece nem zero.</p>
 	<p>Depois de bandejar, compartilhe sua opnião e dê seu voto (você deverá se identificar pelo RA). Após um tempo, o aplicativo irá se tornando personalizado, exibindo estatísticas gerais e pessoais.</p>
 	<p>Esse aplicativo é todo desenvolvido em código aberto e baseado na <a href='http://sitegui.com.br/apis/bandeco'>API do bandeco</a> desenvolvida por mim também (também em código aberto).</p>
 	<p>Vá lá, use à vontade esse aplicativo, adicione-o aos favoritos, conte pros amigos, implemente outras aplicações com base na API do bandeco (os dados são unificados), faça um mundo melhor.</p>
 </div>
-<img src="prev.png" class="botao" onclick="voltar()"> <span id="data">...</span> <img src="next.png" class="botao" onclick="avancar()"> <img src="cog.png" class="botao" id="cog"> <img src="help.png" class="botao" id="help"><br>
+<img src="prev.png" class="botao" onclick="voltar()"> <span id="data" class="botao">...</span> <img src="next.png" class="botao" onclick="avancar()"> <img src="cog.png" class="botao" id="cog"> <img src="help.png" class="botao" id="help"><br>
 <br>
 <div id="principal">...</div>
 <div id="guarnicao" style="font-size:small">...</div>
@@ -110,6 +139,11 @@ p {
 	<img src="2.png" onclick="votar(2)" id="voto4" title="2">
 </div>
 <div id="historico"></div>
-<div id="janela" style="display:none"></div>
+<div id="status" class="escondido"></div>
+<div id="janela" style="display:none">
+	<img src="cross.png" class="botao" onclick="document.getElementById('janela').style.display='none'"><br>
+	<br>
+	<div id="conteudoJanela"></div>
+</div>
 </body>
 </html>

@@ -2,9 +2,14 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
+CREATE SCHEMA IF NOT EXISTS `bandeco` DEFAULT CHARACTER SET utf8 ;
+USE `bandeco` ;
+
 -- -----------------------------------------------------
 -- Table `bandeco`.`familias`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`familias` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`familias` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Id da família' ,
   `nome` VARCHAR(100) NOT NULL COMMENT 'Nome da família' ,
@@ -21,6 +26,8 @@ COMMENT = 'Armazena as famílias de pratos';
 -- -----------------------------------------------------
 -- Table `bandeco`.`pratos`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`pratos` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`pratos` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Identificação do prato' ,
   `familia` INT UNSIGNED NULL DEFAULT NULL COMMENT 'Referencia a família do prato' ,
@@ -44,6 +51,8 @@ COMMENT = 'Guarda os diferentes pratos';
 -- -----------------------------------------------------
 -- Table `bandeco`.`refeicoes`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`refeicoes` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`refeicoes` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Id da refeição' ,
   `data` DATETIME NOT NULL COMMENT 'Armazena a data da refeição' ,
@@ -55,20 +64,13 @@ CREATE  TABLE IF NOT EXISTS `bandeco`.`refeicoes` (
   `suco` VARCHAR(100) NOT NULL COMMENT 'Guarda o suco da refeição' ,
   `nota` FLOAT NULL DEFAULT NULL COMMENT 'Guarda o cache pré calculada da nota (NULL para 0 votos)' ,
   `votos` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Guarda o número de votos' ,
-  `proxima` INT UNSIGNED NULL DEFAULT NULL COMMENT 'Referencia a próxima refeição' ,
   PRIMARY KEY (`id`) ,
   UNIQUE INDEX `dia` (`data` ASC) ,
   INDEX `prato_idx` (`prato` ASC) ,
-  UNIQUE INDEX `refeicao_idx` (`proxima` ASC) ,
   CONSTRAINT `pratoR`
     FOREIGN KEY (`prato` )
     REFERENCES `bandeco`.`pratos` (`id` )
     ON DELETE RESTRICT
-    ON UPDATE CASCADE,
-  CONSTRAINT `refeicaoR`
-    FOREIGN KEY (`proxima` )
-    REFERENCES `bandeco`.`refeicoes` (`id` )
-    ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB
 AUTO_INCREMENT = 403
@@ -79,6 +81,8 @@ COMMENT = 'Armazena todas as refeições';
 -- -----------------------------------------------------
 -- Table `bandeco`.`votos`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`votos` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`votos` (
   `refeicao` INT UNSIGNED NOT NULL COMMENT 'Refeição associada' ,
   `ra` INT UNSIGNED NOT NULL COMMENT 'RA do votante' ,
@@ -99,6 +103,8 @@ COMMENT = 'Armazena todos os votos enviados';
 -- -----------------------------------------------------
 -- Table `bandeco`.`ouvintes`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`ouvintes` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`ouvintes` (
   `ra` INT UNSIGNED NOT NULL COMMENT 'RA do usuário' ,
   `email` VARCHAR(100) NOT NULL COMMENT 'E-mail para o qual as avisos serão enviados' ,
@@ -116,6 +122,8 @@ COMMENT = 'Armazena os ouvintes registrados pelos usuários';
 -- -----------------------------------------------------
 -- Table `bandeco`.`avisos`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `bandeco`.`avisos` ;
+
 CREATE  TABLE IF NOT EXISTS `bandeco`.`avisos` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Id do aviso' ,
   `tipo` TINYINT UNSIGNED NOT NULL COMMENT 'Tipo do aviso' ,

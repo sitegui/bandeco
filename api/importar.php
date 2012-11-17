@@ -17,11 +17,5 @@ new Query('TRUNCATE TABLE familias');
 // Copia e cola
 new Query('INSERT INTO familias SELECT * FROM bandeco2.familias');
 new Query('INSERT INTO pratos SELECT * FROM bandeco2.pratos');
-new Query('INSERT INTO refeicoes SELECT *, NULL FROM bandeco2.refeicoes');
+new Query('INSERT INTO refeicoes SELECT * FROM bandeco2.refeicoes');
 new Query('INSERT INTO votos SELECT refeicao, ra, data, voto FROM bandeco2.votos');
-
-// Atualiza a coluna 'proxima' das refeições
-$proximas = 'SELECT id, (SELECT id FROM refeicoes AS r2 WHERE r2.data>r.data ORDER BY r2.data LIMIT 1) AS proxima FROM refeicoes AS r';
-new Query("UPDATE refeicoes AS r
-JOIN ($proximas) AS p ON p.id=r.id
-SET r.proxima=p.proxima");
