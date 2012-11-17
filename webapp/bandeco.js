@@ -7,13 +7,20 @@ http://sitegui.com.br
 
 */
 
-var _url = "http://sitegui.com.br/apis/bandeco2/", _dados = localStorage.getItem("bandecoDados")
+var _url = "../api/", _dados = localStorage.getItem("bandecoDados")
 var _data = null
 
 // Canal usado para as requisições GET
 var _canal = new CanalAjax
 
 // Armazena todos os dados da aplicação
+// _dados é um objeto com os índices:
+// - versao: identifica a versão do formato para evitar incompatibilidades (number)
+// - ra: guarda o ra fornecido (string)
+// - cache: guarda o cache, indexando pela data (Data.prototype.getHash())
+//          cada elemento é um objeto com três índices: "refeicao", "tempo" e "ra"
+//          "refeicao" é uma refeição com os índices "historico" e "rank" adicionados
+// - votos: armazena os votos ainda não enviados para o servidor (TODO: decidir formato)
 if (_dados != null)
 	_dados = JSON.parse(_dados)
 if (_dados == null || !("versao" in _dados) || _dados.versao != 3.1)
@@ -47,14 +54,16 @@ function mostrarJanela(html) {
 var mostrarRank, mostrarSemana
 
 // Inicia
+// TODO: Avisar que agora tem notificações por e-mail!
 onload = function () {
-	var hash
-	
 	// Coloca os listeners nos botões
 	get("cog").onclick = Menu.abrir([["Ver ranking", mostrarRank], ["Mudar RA", function () {
-		pedirRA(true)
-		// TODO: recarregar tudo
-	}], ["Gerar URL", gerarURL]])
+		if (pedirRA(true))
+			mostrar()
+	}], ["Gerar URL", gerarURL], ["Limpar dados", function () {
+		_dados.versao = 0
+		location.reload()
+	}]])
 	get("help").onclick = Menu.abrir([["Sobre", function () {
 		mostrarJanela(get("sobre").innerHTML)
 	}], ["Fale Conosco", function () {
@@ -65,60 +74,76 @@ onload = function () {
 		window.open("http://sitegui.com.br/apis/bandeco")
 	}]])
 	get("data").onclick = Menu.abrir([["Ver semana", mostrarSemana], ["Ir para data", function () {
-		// TODO: perguntar a data
+		var data = prompt("Digite a data desejada\n(dd ou dd/mm ou dd/mm/aaaa)", _data)
+		if (data)
+			irParaData(data)
 	}]])
 	
-	// Lê o comando inicial pela hash
-	// Formato de exemplo: #J-16/11/2012;tpjfiOrqzOUgrjbi8B85
-	// A chave é usada para configurar as opções de aviso
-	// A data pode estar incompleta da direita para a esquerda
-	hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(.{20}))?$/i)
+	// Exibe o cardápio
 	_data = new Data
+	lerHash()
+	mostrar()
+}
+
+// Lê o comando inicial pela hash
+// Formato de exemplo: #J-16/11/2012;tpjfiOrqzOUgrjbi8B85
+// A chave é usada para configurar as opções de aviso
+// A data pode estar incompleta da direita para a esquerda
+// Retorna se a hash foi lida corretamente
+function lerHash() {
+	var hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(.{20}))?$/i)
 	if (hash) {
 		if (hash[1]) _data.almoco = hash[1].toUpperCase()=="A"
 		if (hash[2]) _data.dia = Number(hash[2])
 		if (hash[3]) _data.mes = Number(hash[3])
 		if (hash[4]) _data.ano = Number(hash[4])
 		_data.normalizar()
+		return true
 	}
-	
-	// Exibe o cardápio
-	mostrar()
-	
-	/*/ Carrega o cenário inicial
-	var hash = verHash()
-	if (dados.refeicaoAtual)
-		montar(dados.refeicaoAtual, true)
-	if (navigator.onLine) {
-		if (ajax)
-			ajax.abortar()
-		ajax = Ajax({url: url+"cardapio?ra="+dados.ra,
-		dados: hash,
-		retorno: "json",
-		funcao: montar,
-		funcaoErro: function () {
-			document.body.style.cursor = ""
-		}})
-		dados.delta = 0
-		document.body.style.cursor = "progress"
-	}*/
+	return false
+}
+window.onhashchange = function () {
+	if (lerHash())
+		mostrar()
 }
 
-// Exibe o cardápio (usa o valor global da data)
+// Vai para uma data específica (pergunta ao usuário)
+// data aceita os formatos dd, dd/mm, dd/mm/aaaa ou r-dd/mm/aaaa
+function irParaData(data) {
+	var partes = data.match(/^(?:([AJ])-)?(\d{1,2})(?:\/(\d{1,2})(?:\/(\d{4}|\d{2}))?)?$/i)
+	if (partes) {
+		_data = new Data
+		if (partes[1]) _data.almoco = partes[1].toUpperCase()=="A"
+		if (partes[2]) _data.dia = Number(partes[2])
+		if (partes[3]) _data.mes = Number(partes[3])
+		if (partes[4]) _data.ano = Number(partes[4])
+		_data.normalizar()
+		mostrar()
+	}
+}
+
+// Atualiza o cache da semana a cada 2 horas
+setInterval(function () {
+	
+}, 2*60*60*1e3)
+
+// Exibe o cardápio (usa o valor global da _data)
 function mostrar() {
-	var dados, tempo = 0, diferenca
+	var dados, tempo = 0, diferenca, ra = "", cache
 	
 	// Atualiza a data da interface
 	get("data").textContent = (_data.almoco ? "Almoço" : "Janta")+" de "+_data.getDiaSemana()+" ("+_data+")"
 	
 	// Busca no cache
 	if (_data.getHash() in _dados.cache) {
-		tempo = _dados.cache[_data.getHash()].tempo
+		cache = _dados.cache[_data.getHash()]
+		tempo = cache.tempo
+		ra = cache.ra
 		Aviso.avisar("Atualizado "+tempo2String(tempo), 1e3)
-		exibirRefeicao(_dados.cache[_data.getHash()].refeicao)
+		exibirRefeicao(cache.refeicao, false)
 	}
 	
-	if (Date.now()-tempo > 30*60*1e3) {
+	if (Date.now()-tempo > 30*60*1e3 || ra != _dados.ra) {
 		// Busca a versão atualizada
 		dados = {dia: _data.dia, mes: _data.mes, ano: _data.ano, almoco: _data.almoco, ra: _dados.ra}
 		_canal.enviarDireto({url: _url+"cardapio", dados: dados, retorno: "JSON", funcao: function (refeicao) {
@@ -127,14 +152,16 @@ function mostrar() {
 				// Sem mais dados
 				Aviso.falhar("Nenhuma refeição mais", 3e3)
 			else {
-				data = new Data(refeicao.data.dia, refeicao.data.mes, refeicao.data.ano)
+				data = new Data(refeicao.data)
 				if (data.getHash() != _data.getHash())
 					// Não é o que foi pedido, descarta
 					refeicao = null
+				else
+					refeicao.historico = refeicao.rank = null
 				
 				// Armazena e exibe
-				_dados.cache[_data.getHash()] = {refeicao: refeicao, tempo: Date.now()}
-				exibirRefeicao(refeicao)
+				_dados.cache[_data.getHash()] = {refeicao: refeicao, tempo: Date.now(), ra: _dados.ra}
+				exibirRefeicao(refeicao, true)
 				Aviso.avisar("Atualizado!", 1e3)
 			}
 		}, funcaoErro: function () {
@@ -144,18 +171,93 @@ function mostrar() {
 }
 
 // Mostra todos os dados da refeição na interface
-function exibirRefeicao(refeicao) {
-	if (refeicao === null)
+// Se recarregarHistorico for true, pega o histórico do servidor e salva no cache
+function exibirRefeicao(refeicao, recarregarHistorico) {
+	var nota, html, i, el, dados
+	if (refeicao === null) {
 		get("principal").innerHTML = "<em>Sem nada</em>"
-	else
-		get("principal").textContent = refeicao.prato.nome
+		get("guarnicao").textContent = ""
+		get("sobremesaESuco").textContent = ""
+		get("nota").textContent = ""
+		for (i=0; i<5; i++) {
+			el = get("voto"+i)
+			el.classList.remove("botao")
+			el.classList.remove("destaque")
+		}
+		get("historico").textContent = ""
+	} else {
+		get("principal").textContent = refeicao.prato.nome.upperCaseFirst()
+		get("guarnicao").textContent = refeicao.guarnicao.upperCaseFirst()
+		if (refeicao.sobremesa && refeicao.suco)
+			get("sobremesaESuco").innerHTML = refeicao.sobremesa.upperCaseFirst()+" e suco de "+refeicao.suco
+		else if (refeicao.sobremesa)
+			get("sobremesaESuco").innerHTML = refeicao.sobremesa.upperCaseFirst()
+		else if (refeicao.suco)
+			get("sobremesaESuco").innerHTML = "Suco de "+refeicao.suco
+		else
+			get("sobremesaESuco").innerHTML = ""
+		nota = getNotaMedia(refeicao.prato)
+		if (nota === null)
+			get("nota").textContent = "Sem notas ainda"
+		else {
+			html = "Nota: <span title='"+refeicao.prato.numVotos+" votos'>"+nota.toFixed(1)+"</span> "+imgTag(nota)
+			if (refeicao.prato.notaPessoal !== null)
+				html += " (para você: "+refeicao.prato.notaPessoal.toFixed(1)+")"
+			get("nota").innerHTML = html
+		}
+		
+		// Mostra a votação
+		podeVotar(refeicao)
+		for (i=0; i<5; i++) {
+			el = get("voto"+i)
+			el.classList[refeicao.podeVotar ? "add" : "remove"]("botao")
+			if (refeicao.notaPessoal == i-2)
+				el.classList.add("destaque")
+			else
+				el.classList.remove("destaque")
+		}
+		
+		// Monta o histórico
+		if (recarregarHistorico) {
+			get("historico").textContent = ""
+			dados = {prato: refeicao.prato.id, refeicoes: 5, ra: _dados.ra}
+			_canal.enviarDireto({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: function (info) {
+				if (info !== null) {
+					refeicao.historico = info.historico
+					refeicao.rank = info.rank
+					montarHistorico(refeicao)
+				}
+			}})
+		} else
+			montarHistorico(refeicao)
+	}
+}
+
+// Monta as informações do histórico (e do rank) do prato associado à refeição
+// Os dados devem estar nas propriedades "historico" e "rank" do parâmetro
+function montarHistorico(refeicao) {
+	var i, html = [], nota, data
+	for (i=0; i<refeicao.historico.length; i++) {
+		if (refeicao.historico[i].id == refeicao.id)
+			continue;
+		nota = refeicao.historico[i].nota
+		data = new Data(refeicao.historico[i].data)
+		html.push("<span title='Em "+data.ano+", "+(nota===null ? "sem nota" : "nota: "+nota)+"' class='botao' onclick='irParaData(\""+data.getHash()+"\")'>"+
+			data.dia+"/"+data.mes+" "+(data.almoco ? "no almoço" : "na janta")+"</span>")
+	}
+	get("historico").innerHTML = html.length ? "Histórico: "+html.join(", ") : "Histórico desconhecido"
+	
+	// Coloca o rank
+	if (refeicao.rank.posicao)
+		get("nota").innerHTML += " ("+refeicao.rank.posicao+"º dentre "+refeicao.rank.total+")"
 }
 
 // Forma uma URL direto para essa página
 function gerarURL() {
 	var html, url
 	url = location.protocol+"//"+location.host+location.pathname+"#"+_data.getHash()
-	html = "Essa URL irá trazer direto para o cardápio do dia "+_data+":<br><span id='tempInput'>"+url+"</span>"
+	html = "Essa URL irá trazer direto para o cardápio d"+(_data.almoco ? "o almoço" : "a janta")+" do dia "+_data
+	html += ":<br><span id='tempInput'>"+url+"</span>"
 	mostrarJanela(html)
 	setTimeout(function () {
 		var range = document.createRange()
@@ -168,6 +270,31 @@ function gerarURL() {
 // Atalho para document.getElementById
 function get(id) {
 	return document.getElementById(id)
+}
+
+// Retorna uma nota "média" entre o prato e a família
+// Usado principalmente para prever a nota de um prato desconhecido
+// Retorna null se não houver como calcular essa nota
+function getNotaMedia(prato) {
+	var soma = 0, n = 0
+	if (prato.nota !== null) {
+		soma += 2*prato.nota
+		n += 2
+	}
+	if (prato.familia !== null && prato.familia.nota !== null) {
+		soma += prato.familia.nota
+		n++
+	}
+	if (n)
+		return soma/n
+	return null
+}
+
+// Verifica se pode votar numa dada refeição
+// Retorna e atualiza o campo "podeVotar" da refeição
+function podeVotar(refeicao) {
+	var dif = Date.now()-(new Data(refeicao.data).getInicio().getTime())
+	return refeicao.podeVotar = dif>0 && dif<7*24*60*60*1e3
 }
 
 // Transforma um valor de tempo em uma string facilmente entendível
@@ -189,7 +316,18 @@ function tempo2String(tempo) {
 	return "há "+s+" segundo"+(s==1 ? "" : "s")
 }
 
-// Avança e retorna no tempo
+// Deixa a primeira letra em maiúscula
+Object.defineProperty(String.prototype, "upperCaseFirst", {value: function () {
+	return this.charAt(0).toUpperCase()+this.substr(1)
+}})
+
+// Retorna a tag HTML para a imagem do smile que representa a nota dada
+function imgTag(nota) {
+	nota = Math.round(nota)
+	return "<img src='"+nota+".png' title='"+nota+"'>"
+}
+
+// Avança e retorna no tempo (usando os botões ou o teclado)
 function avancar() {
 	_data.avancar()
 	mostrar()
@@ -197,6 +335,12 @@ function avancar() {
 function voltar() {
 	_data.voltar()
 	mostrar()
+}
+onkeydown = function (e) {
+	if (e.keyCode == 39)
+		avancar()
+	else if (e.keyCode == 37)
+		voltar()
 }
 
 /*
@@ -214,12 +358,6 @@ setInterval(function () {
 		document.body.style.cursor = "progress"
 	}
 }, 3600e3)
-onkeydown = function (e) {
-	if (e.keyCode == 39)
-		avancar()
-	else if (e.keyCode == 37)
-		voltar()
-}
 
 // Mostra o cardápio da semana
 function mostrarSemana() {
@@ -276,125 +414,6 @@ function mostrarRank() {
 	}})
 }
 
-// Mudanças na hash
-function verHash() {
-	var hash = location.hash, data = {}
-	if (hash.match(/^#[0-9]{8}[aj]$/)) {
-		data.dia = hash.substr(1, 2)
-		data.mes = hash.substr(3, 2)
-		data.ano = hash.substr(5, 4)
-		data.almoco = hash.substr(9)=="a"
-	}
-	return data
-}
-
-// Deixa a primeira letra em maiúscula
-Object.defineProperty(String.prototype, "upperCaseFirst", {value: function () {
-	return this.charAt(0).toUpperCase()+this.substr(1)
-}})
-
-// Coloca um "0" antes se preciso
-Object.defineProperty(Number.prototype, "getCom2Digitos", {value: function () {
-	var s = String(this)
-	return s.length<2 ? "0"+s : s
-}})
-
-// Retorna a tag HTML para a imagem do smile que representa a nota dada
-function imgTag(nota) {
-	nota = Math.round(nota)
-	return "<img src='"+nota+".png' title='"+nota+"'>"
-}
-
-// Monta a interface para refletir os dados da refeição
-function montar(refeicao, veioDoHistorico) {
-	var date, data, atual, html, i, el, nota
-	
-	document.body.style.cursor = ""
-	if (refeicao === null) {
-		alert("Sem dados")
-		dados.delta -= sentido
-		return
-	}
-	dados.refeicaoAtual = refeicao
-	
-	// Atualiza a hash
-	location.hash = "#"+refeicao.data.dia.getCom2Digitos()+refeicao.data.mes.getCom2Digitos()+refeicao.data.ano+(refeicao.data.almoco ? "a" : "j")
-	
-	// Formata a data
-	atual = refeicao.data
-	date = new Date(atual.ano, atual.mes-1, atual.dia)
-	data = (atual.almoco ? "Almoço" : "Janta")+" de "+dias[date.getDay()]+" ("+atual.dia.getCom2Digitos()+"/"+atual.mes.getCom2Digitos()+")"
-	get("data").innerHTML = data
-	
-	// Mostra os dados da refeição
-	get("principal").innerHTML = refeicao.prato.nome.upperCaseFirst()
-	get("guarnicao").innerHTML = refeicao.guarnicao.upperCaseFirst()
-	if (refeicao.sobremesa && refeicao.suco)
-		get("sobremesaESuco").innerHTML = refeicao.sobremesa.upperCaseFirst()+" e suco de "+refeicao.suco
-	else if (refeicao.sobremesa)
-		get("sobremesaESuco").innerHTML = refeicao.sobremesa.upperCaseFirst()
-	else if (refeicao.suco)
-		get("sobremesaESuco").innerHTML = "Suco de "+refeicao.suco
-	else
-		get("sobremesaESuco").innerHTML = ""
-	
-	// Mostra as notas
-	if (refeicao.prato.nota !== null) {
-		nota = refeicao.prato.nota
-		if (refeicao.prato.familia)
-			nota = (nota+refeicao.prato.familia.nota)/2
-		html = "Nota: <span title='"+refeicao.prato.numVotos+" votos'>"+nota.toFixed(1)+"</span> "+imgTag(nota)
-		if (refeicao.prato.notaPessoal !== null)
-			html += " (para você: "+refeicao.prato.notaPessoal.toFixed(1)+")"
-		get("nota").innerHTML = html
-	} else
-		get("nota").innerHTML = "<span style='font-size:small'>Sem notas ainda</span>"
-	
-	// Mostra a votação
-	for (i=0; i<5; i++) {
-		el = get("voto"+i)
-		el.classList[refeicao.podeVotar ? "add" : "remove"]("botao")
-		if (refeicao.notaPessoal == i-2)
-			el.classList.add("destaque")
-		else
-			el.classList.remove("destaque")
-	}
-	
-	// Monta o histórico
-	if (ajax)
-		ajax.abortar()
-	if (veioDoHistorico) {
-		montarPrato(dados.info)
-		return
-	}
-	get("historico").innerHTML = "..."
-	ajax = Ajax({url: url+"infoPrato",
-	dados: {prato: refeicao.prato.id, ra: dados.ra},
-	retorno: "json",
-	funcao : montarPrato})
-}
-
-// Monta as informações do prato
-function montarPrato(info) {
-	var i, html = [], nota, dia, mes, ano
-	dados.info = info
-	for (i=0; i<5 && i<info.historico.length; i++) {
-		if (info.historico[i].id == dados.refeicaoAtual.id)
-			continue;
-		nota = info.historico[i].nota
-		dia = info.historico[i].data.dia.getCom2Digitos()
-		mes = info.historico[i].data.mes.getCom2Digitos()
-		ano = info.historico[i].data.ano
-		html.push("<span title='Em "+ano+", "+(nota===null ? "sem nota" : "nota: "+nota)+"' class='botao' onclick='irHistorico("+i+")'>"+
-			dia+"/"+mes+" "+(info.historico[i].data.almoco ? "no almoço" : "na janta")+"</span>")
-	}
-	get("historico").innerHTML = html.length ? "Histórico: "+html.join(", ") : "Histórico desconhecido"
-	
-	// Coloca o rank
-	if (info.rank.posicao)
-		get("nota").innerHTML += " ("+info.rank.posicao+"º dentre "+info.rank.total+")"
-}
-
 // Vai para uma refeição do histórico
 function irHistorico(i) {
 	montar(dados.info.historico[i], true)
@@ -431,19 +450,5 @@ function carregar() {
 		document.body.style.cursor = ""
 		alert("Erro na conexão")
 	}})
-}
-
-// Carrega a próxima refeição
-function avancar() {
-	sentido = 1
-	dados.delta++
-	carregar()
-}
-
-// Carrega a refeição anterior
-function voltar() {
-	sentido = -1
-	dados.delta--
-	carregar()
 }
 */

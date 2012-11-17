@@ -58,7 +58,7 @@ while ($dados = extrair($pag++)) {
 // Verifica se mudou a semana para avisar do cardápio da semana
 $ultimaSemana = (int)(@file_get_contents('ultimaSemana.txt'));
 $semanaAtual = Data::getSemana();
-if ($semanaAtual > $ultimaSemana || true) {
+if ($semanaAtual > $ultimaSemana) {
 	// Pega todas as refeições
 	$refeicoes = array();
 	$tempoInicio = Data::getInicioSemana();

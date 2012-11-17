@@ -1,10 +1,18 @@
 // Representa um data
+// Pode ser construído a partir de um objeto com as propriedades dia, mes, ano, almoco
 function Data(dia, mes, ano, almoco) {
 	var agora = new Date
-	this.dia = dia===undefined ? agora.getDate() : dia
-	this.mes = mes===undefined ? agora.getMonth()+1 : mes
-	this.ano = ano===undefined ? agora.getFullYear() : ano
-	this.almoco = almoco===undefined ? agora.getHours()<15 : almoco
+	if (typeof dia == "object") {
+		this.dia = dia.dia
+		this.mes = dia.mes
+		this.ano = dia.ano
+		this.almoco = dia.almoco
+	} else {
+		this.dia = dia===undefined ? agora.getDate() : dia
+		this.mes = mes===undefined ? agora.getMonth()+1 : mes
+		this.ano = ano===undefined ? agora.getFullYear() : ano
+		this.almoco = almoco===undefined ? agora.getHours()<15 : almoco
+	}
 	this.normalizar()
 }
 
@@ -33,6 +41,11 @@ Data.prototype.getDiaSemana = function () {
 // Retorna um objeto Date relativo à essa data
 Data.prototype.getDate = function () {
 	return new Date(this.ano, this.mes-1, this.dia, this.almoco ? 12 : 18)
+}
+
+// Retorna o horário de início da refeição
+Data.prototype.getInicio = function () {
+	return new Date(this.ano, this.mes-1, this.dia, this.almoco ? 10 : 17, 30)
 }
 
 // Avança a data

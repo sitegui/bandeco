@@ -4,8 +4,8 @@
 // Menu.fechar() fecha imediatamente o menu aberto
 var Menu = (function () {
 	var divMenu = null
-	window.addEventListener("load", function () {
-		document.body.addEventListener("click", Menu.fechar)
+	window.addEventListener("click", function () {
+		Menu.fechar()
 	})
 	
 	return {abrir: function (opcoes) {
@@ -27,11 +27,11 @@ var Menu = (function () {
 			}
 			
 			// Posiciona
-			if (evento.pageX+divMenu.offsetWidth > document.body.offsetWidth)
+			if (evento.pageX+divMenu.offsetWidth > document.documentElement.clientWidth)
 				divMenu.style.left = (evento.pageX-divMenu.offsetWidth)+"px"
 			else
 				divMenu.style.left = evento.pageX+"px"
-			if (evento.pageY+divMenu.offsetHeight > document.body.offsetHeight)
+			if (evento.pageY+divMenu.offsetHeight > document.documentElement.clientHeight)
 				divMenu.style.top = (evento.pageY-divMenu.offsetHeight)+"px"
 			else
 				divMenu.style.top = evento.pageY+"px"
