@@ -7,7 +7,7 @@ class Email {
 	private function __construct() {}
 	
 	// Envia e-mail para destinatarios com base num modelo
-	// $destinatarios é uma constante da classe Ouvinte ou uma array com os índices nome e email
+	// $destinatarios é uma constante da classe Ouvinte ou uma array com os índices nome, email e chave
 	// $dados é uma array associativa usada para substituir os valores no molde
 	public static function enviar($destinatarios, $dados) {
 		// Carrega os destinatários
@@ -21,7 +21,7 @@ class Email {
 				case Ouvinte::SEMANA: $formato = 'semana'; break;
 				default: return;
 			}
-			$destinatarios = Query::query(false, NULL, 'SELECT nome, email FROM ouvintes WHERE avisos & ?', $destinatarios);
+			$destinatarios = Query::query(false, NULL, 'SELECT nome, email, chave FROM ouvintes WHERE avisos & ?', $destinatarios);
 		}
 		
 		if (empty($destinatarios))
@@ -49,17 +49,16 @@ class Email {
 		$assunto = substr($mensagem, 0, $pos);
 		$mensagem = substr($mensagem, $pos+2);
 		
-		// Monta a lista de destinatarios
-		$para = array();
-		foreach ($destinatarios as $cada)
-			$para[] = '"' . ($cada['nome'] ? addslashes($cada['nome']) : $cada['email']) . '" <' . $cada['email'] . '>';
-		
-		// Envia (em pacotes de 50)
+		// Envia para os destinatarios
 		$headers = "From: \"Bandeco - Sitegui\"<bandeco@sitegui.com.br>";
 		$headers .= "\r\nReply-To: \"Guilherme Souza\"<sitegui@sitegui.com.br>";
 		$headers .= "\r\nContent-type: text/html; charset=UTF-8";
-		for ($i=0; $i<count($para); $i+=50)
-			mail(implode(', ', array_slice($para, $i, 50)), $assunto, $mensagem, $headers);
+		foreach ($destinatarios as $cada) {
+			$para = '"' . ($cada['nome'] ? addslashes($cada['nome']) : $cada['email']) . '" <' . $cada['email'] . '>';
+			$mensagem2 = preg_replace('@\$nome\b@', $cada['nome'], $mensagem);
+			$mensagem2 = preg_replace('@\$chave\b@', $cada['chave'], $mensagem2);
+			mail($para, $assunto, $mensagem2, $headers);
+		}
 	}
 
 	// Função auxiliar para preencher o molde do email
