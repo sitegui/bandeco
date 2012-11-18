@@ -24,7 +24,6 @@ Data.prototype.toString = function () {
 	var dia = String(this.dia), mes = String(this.mes), ano = String(this.ano)
 	dia = this.dia<10 ? "0"+dia : dia
 	mes = this.mes<10 ? "0"+mes : mes
-	ano = this.ano<10 ? "0"+ano : ano
 	return dia+"/"+mes+"/"+ano
 }
 

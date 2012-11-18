@@ -66,6 +66,9 @@ class Email {
 		$nome = $matches[1];
 		if (isset(Email::$dados[$nome]))
 			return Email::$dados[$nome];
-		return '&lt;' . $nome . '&gt;';
+		else if ($nome != 'nome' && $nome != 'chave')
+			return '&lt;' . $nome . '&gt;';
+		else
+			return $matches[0];
 	}
 }

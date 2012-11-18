@@ -38,17 +38,23 @@ while ($dados = extrair($pag++)) {
 		// Dispara o evento de mudança (pra bom ou pra ruim)
 		$notaAntes = $pratoAntes->getNotaMedia();
 		$notaDepois = $pratoDepois->getNotaMedia();
-		$dados = array('antes' => json_encode($pratoAntes), 'depois' => json_encode($pratoDepois));
-		if ($notaDepois < -.5 && $notaDepois < $notaAntes) {
+		$dados2 = array();
+		$dados2['dia'] = getDiaSemana($dados['data']);
+		$dados2['data'] = $dados['data']->dia . '/' . $dados['data']->mes;
+		$dados2['antes'] = $pratoAntes->nome;
+		$dados2['depois'] = $pratoDepois->nome;
+		$dados2['notaAntes'] = nota2html($notaAntes);
+		$dados2['notaDepois'] = nota2html($notaDepois);
+		$dados2['hash'] = getHash($dados['data']);
+		if ($notaDepois < 0 && $notaDepois < $notaAntes) {
 			// Prato ficou ruim
 			new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (-1, ?, NOW())', $idRefeicao);
-			Email::enviar(Ouvinte::RUIM, $dados);
-		} else if ($notaDepois > .5 && $notaDepois > $notaAntes) {
+			Email::enviar(Ouvinte::RUIM, $dados2);
+		} else if ($notaDepois > 0 && $notaDepois > $notaAntes) {
 			// Prato ficou bom
 			new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (1, ?, NOW())', $idRefeicao);
-			Email::enviar(Ouvinte::BOM, $dados);
+			Email::enviar(Ouvinte::BOM, $dados2);
 		}
-		
 	} catch (Exception $e) {
 		// Insere a nova refeição
 		$dadosInsert = $dados;
@@ -72,19 +78,17 @@ if ($semanaAtual > $ultimaSemana) {
 	
 	// Processa as informações
 	$dados = array('semana' => date('d/m', $tempoInicio+2*Data::SEMANA/7) . ' a ' . date('d/m', $tempoFim-Data::SEMANA/7));
-	$dias = array('domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado');
 	$melhor = array(-2, NULL);
 	foreach ($refeicoes as $refeicao) {
 		$nota = $refeicao->prato->getNotaMedia();
 		if ($nota !== NULL && $nota > $melhor[0])
 			$melhor = array($nota, $refeicao);
-		$idData = (getDiaSemana($refeicao)+1) . ($refeicao->data->almoco ? 'a' : 'j');
+		$idData = (getDiaSemana($refeicao->data, false)+1) . ($refeicao->data->almoco ? 'a' : 'j');
 		$dados['prato' . $idData] = ucwords($refeicao->prato->nome);
 		if ($nota === NULL)
 			$dados['nota' . $idData] = 'Histórico desconhecido';
 		else {
-			$dados['nota' . $idData] = str_replace('.', ',', round($nota, 1));
-			$dados['nota' . $idData] .= ' <img style="vertical-align:middle" src="http://sitegui.com.br/bandeco/' . round($nota) . '.png">';
+			$dados['nota' . $idData] = nota2html($nota);
 		}
 	}
 	
@@ -93,7 +97,7 @@ if ($semanaAtual > $ultimaSemana) {
 			$dados['prato' . $cada] = $dados['nota' . $cada] = '-';
 	
 	if ($melhor[1] !== NULL) {
-		$dados['diaShow'] = $dias[getDiaSemana($melhor[1])];
+		$dados['diaShow'] = getDiaSemana($melhor[1]->data);
 		$dados['pratoShow'] = $melhor[1]->prato->nome;
 	} else {
 		$dados['diaShow'] = $dados['pratoShow'] = '-';
@@ -103,12 +107,33 @@ if ($semanaAtual > $ultimaSemana) {
 	Email::enviar(Ouvinte::SEMANA, $dados);
 	
 	// Salva
-	new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (0, ?, NOW())', $refeicoes[0]->id);
+	if (count($refeicoes))
+		new Query('INSERT INTO avisos (tipo, refeicao, data) VALUES (0, ?, NOW())', $refeicoes[0]->id);
 	$ultimaSemana = $semanaAtual;
 	file_put_contents('ultimaSemana.txt', $ultimaSemana);
 }
 
-// Função de apoio: recebe uma Data e retorna o dia da semana
-function getDiaSemana($refeicao) {
-	return (int)date('w', $refeicao->data->getInicio());
+// Recebe uma Data e retorna o dia da semana
+function getDiaSemana(Data $data, $nome=true) {
+	static $dias = array('domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado');
+	if ($nome)
+		return $dias[(int)date('w', $data->getInicio())];
+	return (int)date('w', $data->getInicio());
+}
+
+// Retorna a hash de uma data no formato A-18/11/2012
+function getHash(Data $data) {
+	$dia = $data->dia<10 ? '0' . $data->dia : $data->dia;
+	$mes = $data->mes<10 ? '0' . $data->mes : $data->mes;
+	$ano = $data->ano;
+	return ($data->almoco ? 'A' : 'J') . '-' . $dia . '/' . $mes . '/' . $ano;
+}
+
+// Gera uma representação com texto e imagem para uma nota
+function nota2html($nota) {
+	if ($nota === NULL)
+		return '<span title="Sem nota">-</span>';
+	$html = str_replace('.', ',', round($nota, 1));
+	$html .= ' <img style="vertical-align:middle" src="http://sitegui.com.br/bandeco/' . round($nota) . '.png">';
+	return $html;
 }

@@ -112,10 +112,11 @@ onload = function () {
 // Lê o comando inicial pela hash
 // Formato de exemplo: #J-16/11/2012;tpjfiOrqzOUgrjbi8B85
 // A chave é usada para configurar as opções de aviso
+// O valor especial "#;!" indica que se deseja configurar avisos
 // A data pode estar incompleta da direita para a esquerda
 // Retorna se a hash foi lida corretamente
 function lerHash() {
-	var hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(.{20}))?$/i)
+	var hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(!|.{20}))?$/i)
 	if (hash) {
 		if (hash[1]) _data.almoco = hash[1].toUpperCase()=="A"
 		if (hash[2]) _data.dia = Number(hash[2])
@@ -125,7 +126,8 @@ function lerHash() {
 		
 		// Abre o editor de avisos
 		if (hash[5]) {
-			_chave = hash[5]
+			if (hash[5] != "!")
+				_chave = hash[5]
 			configurarAvisos()
 		}
 		
@@ -461,6 +463,31 @@ function mostrarRanking(pagina) {
 function configurarAvisos() {
 	var html = "<p>Agora você pode ser avisado por e-mail quando o cardápio da semana ficar disponível ou quando ele for alterado</p>"
 	
+	_dados.avisado = true
+	if (_chave) {
+		// Abre o formulário de edição
+		_canal2.enviar({url: _url+"getOuvinte", dados: {chave: _chave}, retorno: "JSON", funcao: function (ouvinte) {
+			var form, html
+			if (ouvinte === null) {
+				Aviso.falhar("Chave incorreta", 3e3)
+				return
+			}
+			html = "<p>Editando os dados do RA "+ouvinte.ra+"</p>"
+			mostrarJanela(html)
+			form = _formOuvinte.cloneNode(true)
+			get("conteudoJanela").appendChild(form)
+			get("avisoRA").value = ouvinte.ra
+			get("avisoNome").value = ouvinte.nome
+			get("avisoEmail").value = ouvinte.email
+			get("checkSemana").checked = ouvinte.avisos & 1
+			get("checkRuim").checked = ouvinte.avisos & 2
+			get("checkBom").checked = ouvinte.avisos & 4
+		}, funcaoErro: function () {
+			Aviso.falhar("Falha na conexão", 3e3)
+		}})
+		return
+	}
+	
 	// Pede o RA
 	if (!_dados.ra) {
 		html += "<p>Para continuar, <span class='botao' onclick='pedirRA();configurarAvisos()'>informe seu RA</span></p>"
@@ -468,7 +495,6 @@ function configurarAvisos() {
 		return
 	}
 	
-	_dados.avisado = true
 	if (!_chave) {
 		// Verifica se precisa de chave
 		_canal2.enviar({url: _url+"pedirChave", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (precisa) {
@@ -484,35 +510,17 @@ function configurarAvisos() {
 		}, funcaoErro: function () {
 			Aviso.falhar("Falha na conexão", 3e3)
 		}, metodo: "POST"})
-		return
 	}
 	
-	// Abre o formulário de edição
-	_canal2.enviar({url: _url+"getOuvinte", dados: {chave: _chave}, retorno: "JSON", funcao: function (ouvinte) {
-		var form, html
-		if (ouvinte === null) {
-			Aviso.falhar("Chave incorreta", 3e3)
-			return
-		}
-		html = "<p>Editando os dados do RA "+ouvinte.ra+"</p>"
-		mostrarJanela(html)
-		form = _formOuvinte.cloneNode(true)
-		get("conteudoJanela").appendChild(form)
-		get("avisoNome").value = ouvinte.nome
-		get("avisoEmail").value = ouvinte.email
-		get("checkSemana").checked = ouvinte.avisos & 1
-		get("checkRuim").checked = ouvinte.avisos & 2
-		get("checkBom").checked = ouvinte.avisos & 4
-	}, funcaoErro: function () {
-		Aviso.falhar("Falha na conexão", 3e3)
-	}})
+	
 }
 
 // Salva as definições do ouvinte
 function salvarOuvinte() {
-	var nome, email, avisos = 0, dados
+	var ra, nome, email, avisos = 0, dados
 	
 	// Pega os valores
+	ra = get("avisoRA").value
 	nome = get("avisoNome").value
 	email = get("avisoEmail").value
 	if (get("checkSemana").checked) avisos += 1
@@ -521,7 +529,7 @@ function salvarOuvinte() {
 	get("janela").style.display = "none"
 	
 	// Salva
-	dados = {ra: _dados.ra, nome: nome, email: email, avisos: avisos, chave: _chave}
+	dados = {ra: ra, nome: nome, email: email, avisos: avisos, chave: _chave}
 	_canal2.enviar({url: _url+"setOuvinte", dados: dados, retorno: "JSON", funcao: function (sucesso) {
 		if (sucesso)
 			Aviso.avisar("Dados salvos com sucesso", 1e3)

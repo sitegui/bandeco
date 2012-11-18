@@ -1,8 +1,8 @@
 <?php
 // Esse script roda a cada meia hora para recalcular as notas
 
-require_once 'mysql.inc.php';
 require_once 'query.2.1.php';
+require_once 'mysql.inc.php';
 
 set_time_limit(90);
 
