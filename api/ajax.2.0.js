@@ -143,8 +143,13 @@ function Ajax(opcoes) {
 // Construtor de um canal Ajax
 // A propriedade fila armazena todos as requisições na fila,
 // sendo fila[0] (se existir) a requisição em andamento (XMLHttpRequest)
+// Chama oncarregar(bool carregando) quando o valor de carregando mudar
 function CanalAjax() {
 	this.fila = []
+	this.oncarregar = null
+	Object.defineProperty(this, "carregando", {get: function () {
+		return Boolean(this.fila.length)
+	}, enumerable: true})
 }
 
 // Cancela todas as requições em andamento e envia essa
@@ -157,6 +162,8 @@ CanalAjax.prototype.enviarDireto = function (opcoes) {
 CanalAjax.prototype.enviar = function (opcoes) {
 	this.fila.push(opcoes)
 	this.enviarProximo()
+	if (this.oncarregar)
+		this.oncarregar(true)
 }
 
 // Envia o próximo (uso interno)
@@ -174,6 +181,8 @@ CanalAjax.prototype.enviarProximo = function () {
 			if (typeof antes == "function")
 				antes.apply(this, arguments)
 			that.fila.shift()
+			if (that.fila.length == 0 && that.oncarregar)
+				that.oncarregar(false)
 			that.enviarProximo()
 		}
 	}
@@ -193,4 +202,6 @@ CanalAjax.prototype.abortar = function () {
 	if (this.fila[0])
 		this.fila[0].abortar()
 	this.fila = []
+	if (this.oncarregar)
+		this.oncarregar(false)
 }
