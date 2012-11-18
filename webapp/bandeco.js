@@ -7,7 +7,7 @@ http://sitegui.com.br
 
 */
 
-var _url = "../api/", _dados = localStorage.getItem("bandecoDados")
+var _url = "http://sitegui.com.br/bandeco", _dados = localStorage.getItem("bandecoDados")
 var _data = null, _formOuvinte = null, _chave = ""
 
 // Canal usado para as requisições GET
@@ -241,7 +241,7 @@ function mostrar(naoNotificar) {
 // Mostra todos os dados da refeição na interface
 // Se recarregarHistorico for true, pega o histórico do servidor e salva no cache
 function exibirRefeicao(refeicao, recarregarHistorico) {
-	var nota, html, i, el, dados
+	var nota, html, i, el, dados, classe
 	if (refeicao === null) {
 		get("principal").innerHTML = "<em>Sem nada</em>"
 		get("guarnicao").textContent = ""
@@ -249,8 +249,7 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 		get("nota").textContent = ""
 		for (i=0; i<5; i++) {
 			el = get("voto"+i)
-			el.classList.remove("botao")
-			el.classList.remove("destaque")
+			el.className = ""
 		}
 		get("historico").textContent = ""
 	} else {
@@ -278,11 +277,10 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 		podeVotar(refeicao)
 		for (i=0; i<5; i++) {
 			el = get("voto"+i)
-			el.classList[refeicao.podeVotar ? "add" : "remove"]("botao")
+			classe = [refeicao.podeVotar ? "botao" : ""]
 			if (refeicao.notaPessoal == i-2)
-				el.classList.add("destaque")
-			else
-				el.classList.remove("destaque")
+				classe.push("destaque")
+			el.className = classe.join(", ")
 		}
 		
 		// Monta o histórico

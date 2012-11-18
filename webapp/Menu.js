@@ -15,7 +15,7 @@ var Menu = (function () {
 			// Monta a div
 			Menu.fechar()
 			divMenu = document.createElement("div")
-			divMenu.classList.add("menu")
+			divMenu.className = "menu"
 			document.body.appendChild(divMenu)
 			
 			// Insere os botões

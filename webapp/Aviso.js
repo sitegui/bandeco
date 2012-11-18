@@ -5,7 +5,6 @@
 var Aviso = (function () {
 	var intervalo = null, mostrar = function (str, tempo) {
 		get("status").textContent = str
-		get("status").classList.remove("escondido")
 		clearInterval(intervalo)
 		if (tempo)
 			intervalo = setTimeout(function () {
@@ -16,13 +15,13 @@ var Aviso = (function () {
 	return {
 		avisar: function (str, tempo) {
 			mostrar(str, tempo)
-			get("status").classList.remove("falha")
+			get("status").className = ""
 		}, falhar: function (str, tempo) {
 			mostrar(str, tempo)
-			get("status").classList.add("falha")
+			get("status").className = "falha"
 		}, esconder: function () {
 			clearInterval(intervalo)
-			get("status").classList.add("escondido")
+			get("status").className = "escondido"
 		}
 	}
 })()

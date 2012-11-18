@@ -1,7 +1,7 @@
 CACHE MANIFEST
 
 # Bandeco Web App
-# Versão 2.3.1 - 15/05/2012 - 2
+# Versão 3.0 - 16/11/2012
 # Guilherme de Oliveira Souza
 # http://sitegui.com.br
 
@@ -10,14 +10,19 @@ CACHE MANIFEST
 -1.png
 2.png
 -2.png
-ajax.js
+ajax.2.0.js
+Aviso.js
 bandeco.js
 cog.png
+cross.png
+Data.js
 help.png
 icone.png
 index.html
+Menu.js
 next.png
 prev.png
+transmit_blue.png
 
 NETWORK:
 http://sitegui.com.br/apis/bandeco
