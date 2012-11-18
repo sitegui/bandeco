@@ -7,7 +7,7 @@ http://sitegui.com.br
 
 */
 
-var _url = "http://sitegui.com.br/bandeco", _dados = localStorage.getItem("bandecoDados")
+var _url = "http://sitegui.com.br/apis/bandeco/", _dados = localStorage.getItem("bandecoDados")
 var _data = null, _formOuvinte = null, _chave = ""
 
 // Canal usado para as requisições GET
