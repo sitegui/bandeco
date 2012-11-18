@@ -8,10 +8,17 @@ http://sitegui.com.br
 */
 
 var _url = "../api/", _dados = localStorage.getItem("bandecoDados")
-var _data = null, _formOuvinte = null
+var _data = null, _formOuvinte = null, _chave = ""
 
 // Canal usado para as requisições GET
-var _canal = new CanalAjax
+var _canal = new CanalAjax // cardápio (somente 1 na fila)
+var _canal2 = new CanalAjax // outros (enfileira todos)
+_canal.oncarregar = _canal2.oncarregar = function () {
+	if (_canal.carregando || _canal2.carregando)
+		get("statusConexao").style.opacity = "1"
+	else
+		get("statusConexao").style.opacity = "0"
+}
 
 // Armazena todos os dados da aplicação
 // _dados é um objeto com os índices:
@@ -56,9 +63,7 @@ onload = function () {
 	get("cog").onclick = Menu.abrir([["Mudar RA", function () {
 		if (pedirRA(true))
 			mostrar()
-	}], ["Configurar avisos", function () {
-		configurarAvisos()
-	}], ["Gerar URL", gerarURL], ["Limpar dados", function () {
+	}], ["Configurar avisos", configurarAvisos], ["Gerar URL", gerarURL], ["Limpar dados", function () {
 		_dados.versao = 0
 		location.reload()
 	}]])
@@ -119,8 +124,10 @@ function lerHash() {
 		_data.normalizar()
 		
 		// Abre o editor de avisos
-		if (hash[5])
-			configurarAvisos(hash[5])
+		if (hash[5]) {
+			_chave = hash[5]
+			configurarAvisos()
+		}
 		
 		return true
 	}
@@ -157,8 +164,6 @@ setInterval(function () {
 }, 2*60*60*1e3)
 setTimeout(atualizarCacheSemana, 60*1e3)
 function atualizarCacheSemana() {
-	var canal = new CanalAjax
-	
 	// Gera funções para salvar o histórico
 	var salvar = function (refeicaoAlvo) {
 		return function (info) {
@@ -169,7 +174,7 @@ function atualizarCacheSemana() {
 		}
 	}
 	
-	canal.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
 		var i, data, refeicao, dados
 		for (i in refeicoes) {
 			refeicao = refeicoes[i]
@@ -179,7 +184,7 @@ function atualizarCacheSemana() {
 			
 			// Atualiza o histórico e rank
 			dados = {prato: refeicao.prato.id, refeicoes: 5, ra: _dados.ra}
-			canal.enviar({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: salvar(refeicao)})
+			_canal2.enviar({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: salvar(refeicao)})
 		}
 		Aviso.avisar("Dados da semana atualizados", 5e3)
 	}, funcaoErro: function () {
@@ -188,7 +193,8 @@ function atualizarCacheSemana() {
 }
 
 // Exibe o cardápio (usa o valor global da _data)
-function mostrar() {
+// Se naoNotificar for true, não exibe notificação de quando atualizou (usado após o voto)
+function mostrar(naoNotificar) {
 	var dados, tempo = 0, diferenca, ra = "", cache
 	
 	// Atualiza a data da interface
@@ -199,7 +205,8 @@ function mostrar() {
 		cache = _dados.cache[_data.getHash()]
 		tempo = cache.tempo
 		ra = cache.ra
-		Aviso.avisar("Atualizado "+tempo2String(tempo), 1e3)
+		if (!naoNotificar)
+			Aviso.avisar("Atualizado "+tempo2String(tempo), 1e3)
 		exibirRefeicao(cache.refeicao, false)
 	}
 	
@@ -221,9 +228,9 @@ function mostrar() {
 				
 				// Armazena e exibe
 				_dados.cache[_data.getHash()] = {refeicao: refeicao, tempo: Date.now(), ra: _dados.ra}
-				exibirRefeicao(refeicao, true)
 				Aviso.avisar("Atualizado!", 1e3)
 			}
+			exibirRefeicao(refeicao, true)
 		}, funcaoErro: function () {
 			Aviso.falhar("Falha na conexão", 3e3)
 			exibirRefeicao(null)
@@ -409,7 +416,7 @@ onkeydown = function (e) {
 
 // Mostra o cardápio da semana
 function mostrarSemana() {
-	Ajax({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
 		var i, refeicao, data, nota, html = "<br><table><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
 		for (i in refeicoes) {
 			refeicao = refeicoes[i]
@@ -432,17 +439,16 @@ function mostrarSemana() {
 // Mostra o rank dos pratos
 function mostrarRanking(pagina) {
 	pagina = pagina || 0
-	Ajax({url: _url+"ranking", dados: {inicio: pagina*50, quantidade: 50, ra: _dados.ra}, retorno: "JSON", funcao: function (pratos) {
-		var i, prato, nota, html = "<br><table><tr><td>Pos</td><td>Prato</td><td>Nota</td></tr>"
+	_canal2.enviar({url: _url+"ranking", dados: {inicio: pagina*50, quantidade: 50, ra: _dados.ra}, retorno: "JSON", funcao: function (pratos) {
+		var i, prato, html = "<br><table><tr><td>Pos</td><td>Prato</td><td>Nota</td></tr>"
 		if (pratos.length == 0) {
 			Aviso.falhar("Sem mais dados", 3e3)
 			return
 		}
 		for (i in pratos) {
 			prato = pratos[i]
-			nota = getNotaMedia(prato)
 			html += "<tr><td>"+(pagina*50+Number(i)+1)+"º</td><td>"+prato.nome.upperCaseFirst()+"</td>"
-			html += "<td title='"+pratos[i].numVotos+" votos nesse prato'>"+nota.toFixed(1)+" "+imgTag(nota)+"</td></tr>"
+			html += "<td title='"+pratos[i].numVotos+" votos nesse prato'>"+prato.nota.toFixed(1)+" "+imgTag(prato.nota)+"</td></tr>"
 		}
 		html += "</table>"
 		if (pratos.length == 50)
@@ -454,7 +460,7 @@ function mostrarRanking(pagina) {
 }
 
 // Abre a janela para configurar o ouvinte do usuário atual
-function configurarAvisos(chave) {
+function configurarAvisos() {
 	var html = "<p>Agora você pode ser avisado por e-mail quando o cardápio da semana ficar disponível ou quando ele for alterado</p>"
 	
 	// Pede o RA
@@ -465,9 +471,9 @@ function configurarAvisos(chave) {
 	}
 	
 	_dados.avisado = true
-	if (!chave) {
+	if (!_chave) {
 		// Verifica se precisa de chave
-		Ajax({url: _url+"pedirChave", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (precisa) {
+		_canal2.enviar({url: _url+"pedirChave", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (precisa) {
 			var form
 			if (precisa)
 				mostrarJanela("<p>Um link foi enviado para seu e-mail, clique nele para continuar</p>")
@@ -484,7 +490,7 @@ function configurarAvisos(chave) {
 	}
 	
 	// Abre o formulário de edição
-	Ajax({url: _url+"getOuvinte", dados: {chave: chave}, retorno: "JSON", funcao: function (ouvinte) {
+	_canal2.enviar({url: _url+"getOuvinte", dados: {chave: _chave}, retorno: "JSON", funcao: function (ouvinte) {
 		var form, html
 		if (ouvinte === null) {
 			Aviso.falhar("Chave incorreta", 3e3)
@@ -496,7 +502,6 @@ function configurarAvisos(chave) {
 		get("conteudoJanela").appendChild(form)
 		get("avisoNome").value = ouvinte.nome
 		get("avisoEmail").value = ouvinte.email
-		get("avisoChave").value = chave
 		get("checkSemana").checked = ouvinte.avisos & 1
 		get("checkRuim").checked = ouvinte.avisos & 2
 		get("checkBom").checked = ouvinte.avisos & 4
@@ -507,20 +512,19 @@ function configurarAvisos(chave) {
 
 // Salva as definições do ouvinte
 function salvarOuvinte() {
-	var nome, email, avisos = 0, chave, dados
+	var nome, email, avisos = 0, dados
 	
 	// Pega os valores
 	nome = get("avisoNome").value
 	email = get("avisoEmail").value
-	chave = get("avisoChave").value
 	if (get("checkSemana").checked) avisos += 1
 	if (get("checkRuim").checked) avisos += 2
 	if (get("checkBom").checked) avisos += 4
 	get("janela").style.display = "none"
 	
 	// Salva
-	dados = {ra: _dados.ra, nome: nome, email: email, avisos: avisos, chave: chave}
-	Ajax({url: _url+"setOuvinte", dados: dados, retorno: "JSON", funcao: function (sucesso) {
+	dados = {ra: _dados.ra, nome: nome, email: email, avisos: avisos, chave: _chave}
+	_canal2.enviar({url: _url+"setOuvinte", dados: dados, retorno: "JSON", funcao: function (sucesso) {
 		if (sucesso)
 			Aviso.avisar("Dados salvos com sucesso", 1e3)
 		else
@@ -534,11 +538,13 @@ function salvarOuvinte() {
 }
 
 // Vota na refeição
+// Retorna se o clique foi válido
 function votar(num) {
 	var refeicao = _dados.cache[_data.getHash()].refeicao, dados
+	get("voto"+(num+2)).blur()
 	
 	if (!podeVotar(refeicao) || !pedirRA())
-		return;
+		return false;
 	
 	dados = {refeicao: refeicao.id, ra: _dados.ra}
 	if (refeicao.notaPessoal != num)
@@ -546,14 +552,16 @@ function votar(num) {
 	else
 		num = null
 	
-	Ajax({url: _url+"votar", dados: dados, retorno: "JSON", funcao: function (ok) {
+	_canal2.enviar({url: _url+"votar", dados: dados, retorno: "JSON", funcao: function (ok) {
 		if (ok) {
 			Aviso.avisar("Voto registrado", 1e3)
 			refeicao.notaPessoal = num
-			mostrar()
+			mostrar(true)
 		} else
 			Aviso.falhar("Voto inválido", 3e3)
 	}, funcaoErro: function () {
 		Aviso.falhar("Falha na conexão", 3e3)
 	}, metodo: "POST"})
+	
+	return true
 }

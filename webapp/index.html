@@ -116,6 +116,15 @@ td {
 .escondido#status {
 	top:-20px;
 }
+#statusConexao {
+	position:absolute;
+	top:0;
+	left:0;
+	width:12px;
+	padding:3px;
+	opacity:1;
+	transition:opacity .5s ease;
+}
 </style>
 </head>
 
@@ -135,21 +144,21 @@ td {
 <div id="sobremesaESuco"></div>
 <div id="nota"></div>
 <div id="votos">Dê seu voto:
-	<img src="-2.png" onclick="votar(-2)" id="voto0" title="-2">
-	<img src="-1.png" onclick="votar(-1)" id="voto1" title="-1">
-	<img src="0.png" onclick="votar(0)" id="voto2" title="0">
-	<img src="1.png" onclick="votar(1)" id="voto3" title="1">
-	<img src="2.png" onclick="votar(2)" id="voto4" title="2">
+	<img src="-2.png" onclick="return votar(-2)" id="voto0" title="-2">
+	<img src="-1.png" onclick="return votar(-1)" id="voto1" title="-1">
+	<img src="0.png" onclick="return votar(0)" id="voto2" title="0">
+	<img src="1.png" onclick="return votar(1)" id="voto3" title="1">
+	<img src="2.png" onclick="return votar(2)" id="voto4" title="2">
 </div>
 <div id="historico"></div>
 <div id="status" class="escondido"></div>
+<img id="statusConexao" src="transmit_blue.png" style="opacity:0">
 <div id="janela" style="display:none">
 	<img src="cross.png" class="botao" onclick="get('janela').style.display='none'"><br>
 	<br>
 	<div id="conteudoJanela"></div>
 </div>
 <form id="formOuvinte" style="display:none" onSubmit="salvarOuvinte(); return false">
-<input type="hidden" id="avisoChave">
 <label for="avisoNome">Nome:</label> <input id="avisoNome" size="30" required><br>
 <label for="avisoEmail">Email:</label> <input type="email" id="avisoEmail" size="30" required><br>
 Avisos desejados:<br>

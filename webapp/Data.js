@@ -1,4 +1,4 @@
-// Representa um data
+// Representa uma data
 // Pode ser construído a partir de um objeto com as propriedades dia, mes, ano, almoco
 function Data(dia, mes, ano, almoco) {
 	var agora = new Date
