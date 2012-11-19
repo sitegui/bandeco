@@ -1,7 +1,7 @@
 /*
 
 Bandeco
-Versão 3.0 - 16/11/2012
+Versão 3.0.1 - 16/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -10,7 +10,11 @@ http://sitegui.com.br
 var _url = "http://sitegui.com.br/apis/bandeco/", _dados = localStorage.getItem("bandecoDados")
 var _data = null, _formOuvinte = null, _chave = ""
 
-// Canal usado para as requisições GET
+// Configurações Ajax
+Ajax.funcaoErro = function () {
+	Aviso.avisar("Falha na conexão", 3e3)
+}
+Ajax.retorno = "JSON"
 var _canal = new CanalAjax // cardápio (somente 1 na fila)
 var _canal2 = new CanalAjax // outros (enfileira todos)
 _canal.oncarregar = _canal2.oncarregar = function () {
@@ -173,10 +177,11 @@ function atualizarCacheSemana() {
 				refeicaoAlvo.historico = info.historico
 				refeicaoAlvo.rank = info.rank
 			}
+			
 		}
 	}
 	
-	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, funcao: function (refeicoes) {
 		var i, data, refeicao, dados
 		for (i in refeicoes) {
 			refeicao = refeicoes[i]
@@ -186,9 +191,13 @@ function atualizarCacheSemana() {
 			
 			// Atualiza o histórico e rank
 			dados = {prato: refeicao.prato.id, refeicoes: 5, ra: _dados.ra}
-			_canal2.enviar({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: salvar(refeicao)})
+			_canal2.enviar({url: _url+"infoPrato", dados: dados, funcao: salvar(refeicao)})
 		}
-		Aviso.avisar("Dados da semana atualizados", 5e3)
+		// Salva forçosamente os dados
+		_canal2.enviar(function () {
+			onbeforeunload()
+			Aviso.avisar("Dados da semana atualizados", 5e3)
+		})
 	}, funcaoErro: function () {
 		Aviso.falhar("Falha na atualização", 5e3)
 	}})
@@ -215,7 +224,7 @@ function mostrar(naoNotificar) {
 	if (Date.now()-tempo > 30*60*1e3 || ra != _dados.ra) {
 		// Busca a versão atualizada
 		dados = {dia: _data.dia, mes: _data.mes, ano: _data.ano, almoco: _data.almoco, ra: _dados.ra}
-		_canal.enviarDireto({url: _url+"cardapio", dados: dados, retorno: "JSON", funcao: function (refeicao) {
+		_canal.enviarDireto({url: _url+"cardapio", dados: dados, funcao: function (refeicao) {
 			var data
 			if (refeicao === null)
 				// Sem mais dados
@@ -289,7 +298,7 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 		if (recarregarHistorico) {
 			get("historico").textContent = ""
 			dados = {prato: refeicao.prato.id, refeicoes: 5, ra: _dados.ra}
-			_canal.enviarDireto({url: _url+"infoPrato", dados: dados, retorno: "JSON", funcao: function (info) {
+			_canal.enviarDireto({url: _url+"infoPrato", dados: dados, funcao: function (info) {
 				if (info !== null) {
 					refeicao.historico = info.historico
 					refeicao.rank = info.rank
@@ -416,7 +425,7 @@ onkeydown = function (e) {
 
 // Mostra o cardápio da semana
 function mostrarSemana() {
-	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (refeicoes) {
+	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, funcao: function (refeicoes) {
 		var i, refeicao, data, nota, html = "<br><table><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
 		for (i in refeicoes) {
 			refeicao = refeicoes[i]
@@ -431,15 +440,13 @@ function mostrarSemana() {
 			html += "<td>"+refeicoes[i].sobremesa.upperCaseFirst()+"</td></tr>"
 		}
 		mostrarJanela("</table>"+html)
-	}, funcaoErro: function () {
-		Avis.falhar("Erro na conexão", 3e3)
 	}})
 }
 
 // Mostra o rank dos pratos
 function mostrarRanking(pagina) {
 	pagina = pagina || 0
-	_canal2.enviar({url: _url+"ranking", dados: {inicio: pagina*50, quantidade: 50, ra: _dados.ra}, retorno: "JSON", funcao: function (pratos) {
+	_canal2.enviar({url: _url+"ranking", dados: {inicio: pagina*50, quantidade: 50, ra: _dados.ra}, funcao: function (pratos) {
 		var i, prato, html = "<br><table><tr><td>Pos</td><td>Prato</td><td>Nota</td></tr>"
 		if (pratos.length == 0) {
 			Aviso.falhar("Sem mais dados", 3e3)
@@ -454,8 +461,6 @@ function mostrarRanking(pagina) {
 		if (pratos.length == 50)
 			html += "<br><span class='botao' onclick='mostrarRanking("+(pagina+1)+")'>Ver mais</span>"
 		mostrarJanela(html)
-	}, funcaErro: function () {
-		Aviso.falhar("Erro na conexão", 3e3)
 	}})
 }
 
@@ -466,7 +471,7 @@ function configurarAvisos() {
 	_dados.avisado = true
 	if (_chave) {
 		// Abre o formulário de edição
-		_canal2.enviar({url: _url+"getOuvinte", dados: {chave: _chave}, retorno: "JSON", funcao: function (ouvinte) {
+		_canal2.enviar({url: _url+"getOuvinte", dados: {chave: _chave}, funcao: function (ouvinte) {
 			var form, html
 			if (ouvinte === null) {
 				Aviso.falhar("Chave incorreta", 3e3)
@@ -482,8 +487,6 @@ function configurarAvisos() {
 			get("checkSemana").checked = ouvinte.avisos & 1
 			get("checkRuim").checked = ouvinte.avisos & 2
 			get("checkBom").checked = ouvinte.avisos & 4
-		}, funcaoErro: function () {
-			Aviso.falhar("Falha na conexão", 3e3)
 		}})
 		return
 	}
@@ -497,7 +500,7 @@ function configurarAvisos() {
 	
 	if (!_chave) {
 		// Verifica se precisa de chave
-		_canal2.enviar({url: _url+"pedirChave", dados: {ra: _dados.ra}, retorno: "JSON", funcao: function (precisa) {
+		_canal2.enviar({url: _url+"pedirChave", dados: {ra: _dados.ra}, funcao: function (precisa) {
 			var form
 			if (precisa)
 				mostrarJanela("<p>Um link foi enviado para seu e-mail, clique nele para continuar</p>")
@@ -507,8 +510,6 @@ function configurarAvisos() {
 				form = _formOuvinte.cloneNode(true)
 				get("conteudoJanela").appendChild(form)
 			}
-		}, funcaoErro: function () {
-			Aviso.falhar("Falha na conexão", 3e3)
 		}, metodo: "POST"})
 	}
 	
@@ -530,13 +531,11 @@ function salvarOuvinte() {
 	
 	// Salva
 	dados = {ra: ra, nome: nome, email: email, avisos: avisos, chave: _chave}
-	_canal2.enviar({url: _url+"setOuvinte", dados: dados, retorno: "JSON", funcao: function (sucesso) {
+	_canal2.enviar({url: _url+"setOuvinte", dados: dados, funcao: function (sucesso) {
 		if (sucesso)
 			Aviso.avisar("Dados salvos com sucesso", 1e3)
 		else
 			Aviso.falhar("Dados inconsistentes", 3e3)
-	}, funcaoErro: function () {
-		Aviso.falhar("Falha na conexão", 3e3)
 	}, metodo: "POST"})
 	
 	// Exclui o form da página
@@ -558,15 +557,13 @@ function votar(num) {
 	else
 		num = null
 	
-	_canal2.enviar({url: _url+"votar", dados: dados, retorno: "JSON", funcao: function (ok) {
+	_canal2.enviar({url: _url+"votar", dados: dados, funcao: function (ok) {
 		if (ok) {
 			Aviso.avisar("Voto registrado", 1e3)
 			refeicao.notaPessoal = num
 			mostrar(true)
 		} else
 			Aviso.falhar("Voto inválido", 3e3)
-	}, funcaoErro: function () {
-		Aviso.falhar("Falha na conexão", 3e3)
 	}, metodo: "POST"})
 	
 	return true

@@ -1,7 +1,7 @@
 /*
 
 Camada de abstração do ajax
-Versão 2.0 - 12/11/2012
+Versão 2.1 - 19/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -25,21 +25,27 @@ Esse objeto têm um método a mais, "abortar", que permite abortar segurante a r
 Nas funções, this se refere ao objeto XMLHttpRequest
 
 Os valores padrões são:
-{"url" : "",
-"funcao" : function () {},
-"dados" : "",
-"metodo" : "GET",
-"timeout" : 30,
-"retorno" : "text",
-"cache" : false,
-"funcaoErro" : function (e) {alert("Erro na conexão");console.log(this);console.log(e)},
-"funcaoTimeout" : this.funcaoErro}
+{url : "",
+funcao : function () {},
+dados : "",
+metodo : "GET",
+timeout : 30,
+retorno : "text",
+cache : false,
+funcaoErro : function (e) {alert("Erro na conexão");console.log(this);console.log(e)},
+funcaoTimeout : this.funcaoErro}
+
+Esse valores podem ser modificados nas propriedades Ajax.nomeDeCadaPropriedade
 
 Além disso, tem o construtor CanalAjax, que representa um canal que:
 - só executa uma requisição por vez
 - enfileira as requisições para serem executadas em ordem
 
 === Changelog ===
+	== 2.1 ==
+		- Valores padrões personalizáveis (Ajax.NomeDaPropriedade)
+		- Suporte a callbacks na fila do CanalAjax
+		- Bug com funções padrão no canal corrigido
 
 	== 2.0 ==
 		- CanalAjax adicionado
@@ -61,18 +67,14 @@ function Ajax(opcoes) {
 	// Recebe os parâmetros
 	var temp, i, valor, ajax, intervalo = null
 	opcoes = opcoes || {}
-	opcoes.url = opcoes.url || ""
-	opcoes.funcao = opcoes.funcao || function () {}
-	opcoes.dados = opcoes.dados || ""
-	opcoes.metodo = (opcoes.metodo || "get").toUpperCase()
-	opcoes.timeout = opcoes.timeout===undefined ? 30 : opcoes.timeout
-	opcoes.retorno = (opcoes.retorno || "text").toLowerCase()
-	opcoes.cache = Boolean(opcoes.cache)
-	opcoes.funcaoErro = opcoes.funcaoErro || function (e) {
-		alert("Erro na conexão")
-		console.log(this)
-		console.log(e)
-	}
+	opcoes.url = opcoes.url || Ajax.url
+	opcoes.funcao = opcoes.funcao || Ajax.funcao
+	opcoes.dados = opcoes.dados || Ajax.dados
+	opcoes.metodo = (opcoes.metodo || Ajax.metodo).toUpperCase()
+	opcoes.timeout = opcoes.timeout===undefined ? Ajax.timeout : opcoes.timeout
+	opcoes.retorno = (opcoes.retorno || Ajax.retorno).toLowerCase()
+	opcoes.cache = opcoes.cache===undefined ? Ajax.cache : opcoes.cache
+	opcoes.funcaoErro = opcoes.funcaoErro || Ajax.funcaoErro
 	opcoes.funcaoTimeout = opcoes.funcaoTimeout || opcoes.funcaoErro
 	
 	// Prepara os dados
@@ -140,6 +142,21 @@ function Ajax(opcoes) {
 	return ajax
 }
 
+// Valores padrão das propriedades
+Ajax.url = ""
+Ajax.funcao = function () {}
+Ajax.dados = ""
+Ajax.metodo = "GET"
+Ajax.timeout = 30
+Ajax.retorno = "text"
+Ajax.cache = false
+Ajax.funcaoErro = function (e) {
+	alert("Erro na conexão")
+	console.log(this)
+	console.log(e)
+}
+// Ajax.funcaoTimeout = this.funcaoErro (o padrão é em relação ao funçãoErro escolhida)
+
 // Construtor de um canal Ajax
 // A propriedade fila armazena todos as requisições na fila,
 // sendo fila[0] (se existir) a requisição em andamento (XMLHttpRequest)
@@ -159,6 +176,8 @@ CanalAjax.prototype.enviarDireto = function (opcoes) {
 }
 
 // Coloca a requisição atual na fila de envio
+// opcoes é o mesmo argumento que seria passado para a função Ajax ou
+//   uma função que será executada quando chegar a hora (recebe a instância do CanalAjax como argumento)
 CanalAjax.prototype.enviar = function (opcoes) {
 	this.fila.push(opcoes)
 	this.enviarProximo()
@@ -174,21 +193,32 @@ CanalAjax.prototype.enviarProximo = function () {
 		// Não há nada na fila ou já há uma requisição em andamento
 		return;
 	
+	if (typeof this.fila[0] == "function") {
+		// É uma função, simplesmente executa
+		this.fila.shift()(this)
+		if (this.fila.length == 0 && this.oncarregar)
+			this.oncarregar(false)
+		this.enviarProximo()
+		return
+	}
+	
 	// Altera a função com nome func no objeto obj para que, ao ser executada, executa o espião depois
 	capturar = function (obj, func) {
 		var antes = obj[func]
 		obj[func] = function () {
-			if (typeof antes == "function")
-				antes.apply(this, arguments)
 			that.fila.shift()
 			if (that.fila.length == 0 && that.oncarregar)
 				that.oncarregar(false)
+			if (typeof antes == "function")
+				antes.apply(this, arguments)
 			that.enviarProximo()
 		}
 	}
 	
 	// Coloca um observador nas funções de sucesso e retorno
+	this.fila[0].funcao = this.fila[0].funcao || Ajax.funcao
 	capturar(this.fila[0], "funcao")
+	this.fila[0].funcaoErro = this.fila[0].funcaoErro || Ajax.funcaoErro
 	capturar(this.fila[0], "funcaoErro")
 	if (this.fila[0].funcaoTimeout)
 		capturar(this.fila[0], "funcaoTimeout")
