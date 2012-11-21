@@ -1,7 +1,7 @@
 /*
 
 Bandeco
-Versão 3.0.1 - 16/11/2012
+Versão 3.0.2 - 21/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -12,7 +12,7 @@ var _data = null, _formOuvinte = null, _chave = ""
 
 // Configurações Ajax
 Ajax.funcaoErro = function () {
-	Aviso.avisar("Falha na conexão", 3e3)
+	Aviso.falhar("Falha na conexão", 3e3)
 }
 Ajax.retorno = "JSON"
 var _canal = new CanalAjax // cardápio (somente 1 na fila)
@@ -102,7 +102,7 @@ onload = function () {
 	if (!_dados.avisado) {
 		setTimeout(function () {
 			var html
-			if (_dados.ra) {
+			if (_dados.ra && !_dados.avisado) {
 				html = "<p>Quer ser avisado por e-mail do cardápio da semana ou quando ele for alterado (pra melhor ou pior)?</p>"
 				html += "<p><span class='botao' onclick='configurarAvisos()'>Sim, configurar isso agora!</span><br>"
 				html += "<span class='botao' onclick='get(\"janela\").style.display=\"none\"' style='font-size:smaller'>Não, deixa pra depois...</span></p>"
@@ -206,7 +206,7 @@ function atualizarCacheSemana() {
 // Exibe o cardápio (usa o valor global da _data)
 // Se naoNotificar for true, não exibe notificação de quando atualizou (usado após o voto)
 function mostrar(naoNotificar) {
-	var dados, tempo = 0, diferenca, ra = "", cache
+	var dados, tempo = 0, diferenca, ra = "", cache = null
 	
 	// Atualiza a data da interface
 	get("data").textContent = (_data.almoco ? "Almoço" : "Janta")+" de "+_data.getDiaSemana()+" ("+_data.getResumido()+")"
@@ -244,7 +244,8 @@ function mostrar(naoNotificar) {
 			exibirRefeicao(refeicao, true)
 		}, funcaoErro: function () {
 			Aviso.falhar("Falha na conexão", 3e3)
-			exibirRefeicao(null)
+			if (cache === null)
+				exibirRefeicao(null)
 		}})
 	}
 }
@@ -509,6 +510,7 @@ function configurarAvisos() {
 				mostrarJanela(html)
 				form = _formOuvinte.cloneNode(true)
 				get("conteudoJanela").appendChild(form)
+				get("avisoRA").value = _dados.ra
 			}
 		}, metodo: "POST"})
 	}
