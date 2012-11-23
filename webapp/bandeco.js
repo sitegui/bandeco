@@ -1,7 +1,7 @@
 /*
 
 Bandeco
-Versão 3.0.2 - 21/11/2012
+Versão 3.1 - 22/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -80,9 +80,11 @@ onload = function () {
 	}], ["API Bandeco", function () {
 		window.open("http://sitegui.com.br/apis/bandeco")
 	}]])
-	get("data").onclick = Menu.abrir([["Ver semana", mostrarSemana], ["Ir para data", function () {
+	get("data").onclick = Menu.abrir([["Ver semana toda", function () {
+		mostrarSemana()
+	}], ["Ir para data", function () {
 		var data = prompt("Digite a data desejada\n(dd ou dd/mm ou dd/mm/aaaa)", _data)
-		if (data)
+		if (data != null)
 			irParaData(data)
 	}], ["Ver ranking", function () {
 		mostrarRanking()
@@ -100,16 +102,24 @@ onload = function () {
 	
 	// Avisa da novidade
 	if (!_dados.avisado) {
-		setTimeout(function () {
-			var html
-			if (_dados.ra && !_dados.avisado) {
-				html = "<p>Quer ser avisado por e-mail do cardápio da semana ou quando ele for alterado (pra melhor ou pior)?</p>"
-				html += "<p><span class='botao' onclick='configurarAvisos()'>Sim, configurar isso agora!</span><br>"
-				html += "<span class='botao' onclick='get(\"janela\").style.display=\"none\"' style='font-size:smaller'>Não, deixa pra depois...</span></p>"
-				mostrarJanela(html)
-				_dados.avisado = true
-			}
-		}, 45e3)
+		setTimeout(avisarNovidade, 45e3)
+	}
+}
+
+// Avisa que agora pode receber avisos por e-mail
+function avisarNovidade() {
+	var html
+	if (_dados.ra && !_dados.avisado) {
+		if (get("janela").style.display != "none") {
+			// A janela está em uso, espera um pouco
+			setTimeout(avisarNovidade, 1e3)
+			return
+		}
+		html = "<p>Quer ser avisado por e-mail do cardápio da semana ou quando ele for alterado (pra melhor ou pior)?</p>"
+		html += "<p><span class='botao' onclick='configurarAvisos()'>Sim, configurar isso agora!</span><br>"
+		html += "<span class='botao' onclick='get(\"janela\").style.display=\"none\"' style='font-size:smaller'>Não, deixa pra depois...</span></p>"
+		mostrarJanela(html)
+		_dados.avisado = true
 	}
 }
 
@@ -117,10 +127,11 @@ onload = function () {
 // Formato de exemplo: #J-16/11/2012;tpjfiOrqzOUgrjbi8B85
 // A chave é usada para configurar as opções de aviso
 // O valor especial "#;!" indica que se deseja configurar avisos
+// O valor especial "#;?" indica que se deseja votar nas refeições da semana
 // A data pode estar incompleta da direita para a esquerda
 // Retorna se a hash foi lida corretamente
 function lerHash() {
-	var hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(!|.{20}))?$/i)
+	var hash = location.hash.match(/^#(?:([AJ])(?:-(\d{2})(?:\/(\d{2})(?:\/(\d{4}))?)?)?)?(?:;(!|\?|.{20}))?$/i)
 	if (hash) {
 		if (hash[1]) _data.almoco = hash[1].toUpperCase()=="A"
 		if (hash[2]) _data.dia = Number(hash[2])
@@ -129,11 +140,15 @@ function lerHash() {
 		_data.normalizar()
 		
 		// Abre o editor de avisos
-		if (hash[5]) {
-			if (hash[5] != "!")
+		if (hash[5])
+			if (hash[5] == "?")
+				mostrarSemana(true)
+			else if (hash[5] == "!")
+				configurarAvisos()
+			else {
 				_chave = hash[5]
-			configurarAvisos()
-		}
+				configurarAvisos()
+			}
 		
 		return true
 	}
@@ -147,7 +162,7 @@ window.onhashchange = function () {
 // Vai para uma data específica (pergunta ao usuário)
 // data aceita os formatos dd, dd/mm, dd/mm/aaaa ou r-dd/mm/aaaa
 function irParaData(data) {
-	var partes = data.match(/^(?:([AJ])-)?(\d{1,2})(?:\/(\d{1,2})(?:\/(\d{4}|\d{2}))?)?$/i)
+	var partes = data.match(/^(?:([AJ])-)?(\d{1,2})?(?:\/(\d{1,2})(?:\/(\d{4}|\d{2}))?)?$/i)
 	if (partes) {
 		_data = new Data
 		if (partes[1]) _data.almoco = partes[1].toUpperCase()=="A"
@@ -159,7 +174,7 @@ function irParaData(data) {
 	}
 }
 
-// Atualiza o cache da semana depois de 1 minuto e a cada 2 horas
+// Atualiza o cache da semana depois de 45s e a cada 2 horas
 setInterval(function () {
 	// Atualiza o cache da semana
 	atualizarCacheSemana()
@@ -168,7 +183,7 @@ setInterval(function () {
 	_data = new Data
 	mostrar()
 }, 2*60*60*1e3)
-setTimeout(atualizarCacheSemana, 60*1e3)
+setTimeout(atualizarCacheSemana, 45*1e3)
 function atualizarCacheSemana() {
 	// Gera funções para salvar o histórico
 	var salvar = function (refeicaoAlvo) {
@@ -292,7 +307,7 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 			classe = [refeicao.podeVotar ? "botao" : ""]
 			if (refeicao.notaPessoal == i-2)
 				classe.push("destaque")
-			el.className = classe.join(", ")
+			el.className = classe.join(" ")
 		}
 		
 		// Monta o histórico
@@ -315,8 +330,10 @@ function exibirRefeicao(refeicao, recarregarHistorico) {
 // Os dados devem estar nas propriedades "historico" e "rank" do parâmetro
 function montarHistorico(refeicao) {
 	var i, html = [], nota, data
-	if (refeicao.historico === null || refeicao.rank === null)
-		return;
+	if (refeicao.historico === null || refeicao.rank === null) {
+		get("historico").textContent = ""
+		return
+	}
 	
 	for (i=0; i<refeicao.historico.length; i++) {
 		if (refeicao.historico[i].id == refeicao.id)
@@ -425,23 +442,104 @@ onkeydown = function (e) {
 }
 
 // Mostra o cardápio da semana
-function mostrarSemana() {
-	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra}, funcao: function (refeicoes) {
-		var i, refeicao, data, nota, html = "<br><table><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
+// Se votar for true, abre o painel para votar nas refeições da semana
+function mostrarSemana(votar) {
+	_canal2.enviar({url: _url+"semana", dados: {ra: _dados.ra, semana: _data.getSemana()}, funcao: function (refeicoes) {
+		var i, refeicao, data, nota, html = "<p><span class='botao' onclick='votarSemana()'>Vote nas refeições dessa semana</span></p>"
+		html += "<table id='tabelaSemana'><tr><td>Data</td><td>Prato</td><td>Nota</td><td>Sobremesa</td></tr>"
 		for (i in refeicoes) {
 			refeicao = refeicoes[i]
 			data = new Data(refeicao.data)
-			html += "<tr><td>"+(refeicoes[i].data.almoco ? "Almoço" : "Janta")+" de "+data.getDiaSemana()+" <span style='font-size:smaller'>("+data.getResumido()+")</span></td>"
+			
+			// Coloca vários dados da refeição no html
+			html += "<tr data-data='"+data.getHash()+"'>"
+			
+			html += "<td>"+(refeicoes[i].data.almoco ? "Almoço" : "Janta")+" de "+data.getDiaSemana()+" <span style='font-size:smaller'>("+data.getResumido()+")</span></td>"
 			html += "<td>"+refeicoes[i].prato.nome.upperCaseFirst()+"</td>"
 			nota = getNotaMedia(refeicao.prato)
+			
 			if (nota === null)
 				html += "<td>-</td>"
 			else
 				html += "<td title='"+refeicao.prato.numVotos+" votos nesse prato'>"+nota.toFixed(1)+" "+imgTag(nota)+"</td>"
 			html += "<td>"+refeicoes[i].sobremesa.upperCaseFirst()+"</td></tr>"
+			
+			// Salva no cache
+			refeicao.historico = refeicao.rank = null
+			_dados.cache[data.getHash()] = {refeicao: refeicao, tempo: Date.now(), ra: _dados.ra}
 		}
 		mostrarJanela("</table>"+html)
+		
+		if (votar)
+			votarSemana()
 	}})
+}
+
+// Mostra o cardápio da semana passada para a pessoa poder votar
+function votarSemana() {
+	var tabela, i, linha, html, nota, classe, refeicao
+	
+	if (!pedirRA())
+		return
+	
+	// Modifica a tabela, criando o formulário
+	tabela = get("tabelaSemana")
+	for (i=0; i<tabela.rows.length; i++) {
+		linha = tabela.rows.item(i)
+		linha.cells.item(3).style.display = "none"
+		if (!i)
+			linha.cells.item(2).textContent = "Voto"
+		else {
+			if (_dados.cache[linha.dataset.data].ra != _dados.ra) {
+				// Não tem as notas corretas carregas, recarrega a semana toda
+				mostrarSemana(true)
+				return
+			}
+			refeicao = _dados.cache[linha.dataset.data].refeicao
+			html = ""
+			if (refeicao.podeVotar)
+				for (nota=-2; nota<=2; nota++) {
+					classe = nota==refeicao.notaPessoal ? "botao destaque" : "botao"
+					html += "<img src='"+nota+".png' title='"+nota+"' id='voto"+(nota+2)+"Linha"+i+"'"
+					html += "onclick='votarSemanaClick("+i+", "+nota+")' class='"+classe+"'> "
+				}
+			else {
+				html = "Votação fechada"
+				if (refeicao.notaPessoal)
+					html += " em <img src='"+refeicao.notaPessoal+".png' title='"+refeicao.notaPessoal+"'>"
+			}
+			linha.cells.item(2).innerHTML = html
+		}
+	}
+	
+	// Modifica o texto
+	get("conteudoJanela").firstChild.textContent = "Escolha abaixo os votos nas refeições dessa semana"
+}
+
+// Processa o clique num voto da semana
+function votarSemanaClick(linha, voto) {
+	var data = get("tabelaSemana").rows.item(linha).dataset.data
+	var refeicao = _dados.cache[data].refeicao, dados, i
+	get("voto"+(voto+2)+"Linha"+linha).blur()
+	
+	// Atualiza a interface
+	if (get("voto"+(voto+2)+"Linha"+linha).className.indexOf("destaque") != -1)
+		voto = null
+	for (i=-2; i<=2; i++)
+		get("voto"+(i+2)+"Linha"+linha).className = i==voto ? "botao destaque" : "botao"
+	
+	dados = {refeicao: refeicao.id, ra: _dados.ra}
+	if (voto != null)
+		dados.voto = voto
+	
+	_canal2.enviar({url: _url+"votar", dados: dados, funcao: function (ok) {
+		if (ok) {
+			Aviso.avisar("Voto registrado", 1e3)
+			refeicao.notaPessoal = voto
+			mostrar(true)
+		} else
+			Aviso.falhar("Voto inválido", 3e3)
+	}, metodo: "POST"})
 }
 
 // Mostra o rank dos pratos
@@ -514,8 +612,6 @@ function configurarAvisos() {
 			}
 		}, metodo: "POST"})
 	}
-	
-	
 }
 
 // Salva as definições do ouvinte
@@ -551,7 +647,7 @@ function votar(num) {
 	get("voto"+(num+2)).blur()
 	
 	if (!podeVotar(refeicao) || !pedirRA())
-		return false;
+		return false
 	
 	dados = {refeicao: refeicao.id, ra: _dados.ra}
 	if (refeicao.notaPessoal != num)

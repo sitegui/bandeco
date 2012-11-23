@@ -33,6 +33,12 @@ Data.prototype.getResumido = function () {
 	return this.ano==ano ? String(this).substr(0, 5) : String(this)
 }
 
+// Retorna o número da semana
+Data.prototype.getSemana = function () {
+	var time = this.getDate().getTime()/1e3
+	return Math.floor((time-1293926400)/604800);
+}
+
 // Retorna no formato A-dd/mm/YYYY
 Data.prototype.getHash = function () {
 	return (this.almoco ? "A" : "J")+"-"+String(this)
