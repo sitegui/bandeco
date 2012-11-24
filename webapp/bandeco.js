@@ -1,7 +1,7 @@
 /*
 
 Bandeco
-Versão 3.1 - 22/11/2012
+Versão 3.1 - 23/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -609,8 +609,27 @@ function configurarAvisos() {
 				form = _formOuvinte.cloneNode(true)
 				get("conteudoJanela").appendChild(form)
 				get("avisoRA").value = _dados.ra
+				get("btRemoverOuvinte").style.display = "none"
+				get("avisoNome").focus()
 			}
 		}, metodo: "POST"})
+	}
+}
+
+// Remove o ouvinte cadastrado
+function removerOuvinte() {
+	if (confirm("Deseja realmente descadastrar seu e-mail?")) {
+		_canal2.enviar({url: _url+"removerOuvinte", dados: {chave: _chave}, funcao: function (ok) {
+			if (ok) {
+				Aviso.avisar("Cadastro excluído", 3e3)
+				_chave = ""
+			} else
+				Aviso.falhar("Não foi possível excluir cadastro", 3e3)
+		}, metodo: "POST"})
+		
+		// Apaga o forms e a janela
+		get("janela").style.display = "none"
+		get("conteudoJanela").removeChild(get("formOuvinte"))
 	}
 }
 

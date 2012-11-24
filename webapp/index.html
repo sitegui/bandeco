@@ -1,10 +1,10 @@
 <!DOCTYPE HTML>
-<html manifest="nao-bandeco.cache">
+<html manifest="bandeco.cache">
 <head>
 <!--
 
 Bandeco
-Versão 3.1 - 22/11/2012
+Versão 3.1 - 23/11/2012
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -37,6 +37,9 @@ img {
 }
 .botao:hover {
 	box-shadow:0px 0px 2px 0px black;
+}
+.botao:active {
+	box-shadow:inset 0 0 1px 0 black;
 }
 .destaque {
 	border-radius:5px;
@@ -130,7 +133,7 @@ td {
 
 <body>
 <div id="sobre" style="display:none">
-	<h2>Bandeco Web App (Versão 3.1 - 22/11/2012)</h2>
+	<h2>Bandeco Web App (Versão 3.1 - 23/11/2012)</h2>
 	<p>Este é um aplicativo Web que permite não apenas ver o cardápio do Bandeco (ou bandex), mas também dar seu voto após cada refeição, formando um grande histórico de todos os pratos, facilitando a indecisão eterna de ir no bandeco ou outro lugar.</p>
 	<p>O voto vai de -2 a 2 (positivo é comestível, negativo é tenso...). Escolhi essa escala pois algumas vezes o bandeco não merece nem zero.</p>
 	<p>Depois de bandejar, compartilhe sua opnião e dê seu voto (você deverá se identificar pelo RA). Após um tempo, o aplicativo irá se tornando personalizado, exibindo estatísticas gerais e pessoais.</p>
@@ -166,7 +169,7 @@ Avisos desejados:<br>
 <input type="checkbox" id="checkSemana" checked> <label for="checkSemana">Cardápio da semana</label><br>
 <input type="checkbox" id="checkRuim" checked> <label for="checkRuim">Troca para um prato ruim e pior</label><br>
 <input type="checkbox" id="checkBom" checked> <label for="checkBom">Troca para um prato bom e melhor</label><br>
-<input type="submit" value="Cadastrar">
+<input type="submit" value="Salvar"> <input type="button" value="Remover registro" id="btRemoverOuvinte" onclick="removerOuvinte()">
 </form>
 </body>
 </html>
