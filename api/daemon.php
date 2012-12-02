@@ -78,7 +78,7 @@ if ($semanaAtual > $ultimaSemana) {
 	
 	// Processa as informações
 	$dados = array('semana' => date('d/m', $tempoInicio+2*Data::SEMANA/7) . ' a ' . date('d/m', $tempoFim-Data::SEMANA/7));
-	$dados['votar'] = 'http://sitegui.com.br/bandeco/#A-' . date('d/m/Y', $tempoInicio+Data::SEMANA/7) . ';?';
+	$dados['votar'] = 'http://sitegui.com.br/bandeco/#A-' . date('d/m/Y', $tempoInicio-Data::SEMANA/2) . ';?';
 	$melhor = array(-2, NULL);
 	foreach ($refeicoes as $refeicao) {
 		$nota = $refeicao->prato->getNotaMedia();
