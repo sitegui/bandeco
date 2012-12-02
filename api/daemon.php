@@ -21,7 +21,7 @@ while ($dados = extrair($pag++)) {
 		$dados['prato'] = Query::query(true, 0, 'SELECT id FROM pratos WHERE nome=? LIMIT 1', $dados['prato']);
 	} catch (Exception $e) {
 		// Novo prato
-		new Query('INSERTO INTO pratos (nome) VALUES (?)', $dados['prato']);
+		new Query('INSERT INTO pratos (nome) VALUES (?)', $dados['prato']);
 		$dados['prato'] = Query::$conexao->insert_id;
 	}
 	
