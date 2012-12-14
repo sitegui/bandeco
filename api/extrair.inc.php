@@ -6,7 +6,7 @@
 // Em caso de erro, retorna false
 function extrair($pag=1) {
 	// Pega o conteúdo da página
-	$requisicao = curl_init('http://www.prefeitura.unicamp.br/busca_cardapio.php?pagina=' . $pag);
+	$requisicao = curl_init('http://www.prefeitura.unicamp.br/cardapio_pref.php?pagina=' . $pag);
 	curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
 	curl_setopt($requisicao, CURLOPT_RETURNTRANSFER, true);
 	$pagina = curl_exec($requisicao);
