@@ -134,7 +134,7 @@ function getHash(Data $data) {
 function nota2html($nota) {
 	if ($nota === NULL)
 		return '<span title="Sem nota">-</span>';
-	$html = str_replace('.', ',', round($nota, 1));
-	$html .= ' <img style="vertical-align:middle" src="http://sitegui.com.br/bandeco/' . round($nota) . '.png">';
+	$html = number_format($nota, 1, ',', '.');
+	$html .= ' <img style="vertical-align:middle" src="http://sitegui.com.br/bandeco/' . ((int)round($nota)) . '.png">';
 	return $html;
 }
