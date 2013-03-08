@@ -1,7 +1,7 @@
 /*
 
 Bandeco
-Versão 3.1 - 23/11/2012
+Versão 3.1 - 07/03/2013
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -102,7 +102,7 @@ onload = function () {
 	
 	// Avisa da novidade
 	if (!_dados.avisado) {
-		setTimeout(avisarNovidade, 45e3)
+		setTimeout(avisarNovidade, 30e3)
 	}
 }
 

@@ -31,7 +31,7 @@ function extrair($pag=1) {
 	$data = new Data($dia, $mes, $ano, $almoco);
 	
 	// Interpreta o cardápio em si
-	$resposta = array('prato' => '', 'guarnicao' => '', 'pts' => '', 'salada' => '', 'sobremesa' => '', 'suco' => '');
+	$resposta = array('prato' => '', 'guarnicao' => array(), 'pts' => '', 'salada' => '', 'sobremesa' => '', 'suco' => '');
 	$resposta['data'] = $data;
 	
 	$tags = array('prato principal:  ' => 'prato', 'salada: ' => 'salada', 'sobremesa: ' => 'sobremesa', 'suco: ' => 'suco');
@@ -54,8 +54,9 @@ function extrair($pag=1) {
 			$resposta['pts'] = trim(str_replace('pts', '', $parte));
 		else
 			// Informações adicionais
-			$resposta['guarnicao'] = $parte;
+			$resposta['guarnicao'][] = $parte;
 	}
+	$resposta['guarnicao'] = implode(', ', $resposta['guarnicao']);
 	
 	return $resposta;
 }
