@@ -1,0 +1,11 @@
+{
+	"name": "Bandeco",
+	"description": "Mostra o cardápio do bandeco da Unicamp",
+	"appcache_path": "/bandeco.cache",
+	"default_locale": "pt-br",
+	"developer": {"name": "Guilherme Souza", "url": "http://sitegui.com.br"},
+	"icons": {"128": "/icone2.png"},
+	"launch_path": "/",
+	"version": "3.2",
+	"orientation": ["landscape"]
+}

@@ -1,3 +1,5 @@
+"use strict";
+
 // Gerencia o funcionamento dos menus
 // Menu.abrir(opcoes) retorna um ouvinte para ser usando, geralmente, como:
 // document.getElementById("botao").onclick = Menu.abrir([["A", funcA], ["B", funcB]])

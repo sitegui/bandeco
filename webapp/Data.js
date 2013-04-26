@@ -1,3 +1,5 @@
+"use strict";
+
 // Representa uma data
 // Pode ser construído a partir de um objeto com as propriedades dia, mes, ano, almoco
 function Data(dia, mes, ano, almoco) {

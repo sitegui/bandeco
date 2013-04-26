@@ -9,4 +9,5 @@ Web App Bandeco
 
 Interface para acessar os dados da API, baseado em HTML5, CSS e JS.
 Acessível de qualquer praticamente dispositivo com acesso à Internet
-URL: http://sitegui.com.br/bandeco
+Também pode ser instalado como App do Firefox
+URL: http://unibandeco.com.br

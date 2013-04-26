@@ -1,3 +1,5 @@
+"use strict";
+
 // Controla os avisos na tela
 // Aviso.avisar(string str, int tempo=0)
 // Aviso.falhar(string str, int tempo=0)

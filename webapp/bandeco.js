@@ -1,7 +1,9 @@
+"use strict";
+
 /*
 
 Bandeco
-Versão 3.1 - 07/03/2013
+Versão 3.2 - 26/04/2013
 Guilherme de Oliveira Souza
 http://sitegui.com.br
 
@@ -36,7 +38,7 @@ if (_dados != null)
 if (_dados == null || !("versao" in _dados) || _dados.versao != 3)
 	_dados = {versao: 3, ra: "", cache: {}, avisado: false}
 
-onbeforeunload = function () {
+window.onbeforeunload = function () {
 	localStorage.setItem("bandecoDados", JSON.stringify(_dados))
 }
 
@@ -62,15 +64,9 @@ function mostrarJanela(html) {
 }
 
 // Inicia
-onload = function () {
+window.onload = function () {
 	// Coloca os listeners nos botões
-	get("cog").onclick = Menu.abrir([["Mudar RA", function () {
-		if (pedirRA(true))
-			mostrar()
-	}], ["Configurar avisos", configurarAvisos], ["Gerar URL", gerarURL], ["Limpar dados", function () {
-		_dados.versao = 0
-		location.reload()
-	}]])
+	definirOpcoes()
 	get("help").onclick = Menu.abrir([["Sobre", function () {
 		mostrarJanela(get("sobre").innerHTML)
 	}], ["Fale Conosco", function () {
@@ -104,6 +100,39 @@ onload = function () {
 	if (!_dados.avisado) {
 		setTimeout(avisarNovidade, 30e3)
 	}
+}
+
+// Define as opções para o botão de mais opções
+function definirOpcoes() {
+	var opcoes, request
+	
+	// Opções básicas
+	opcoes = [["Mudar RA", function () {
+		if (pedirRA(true))
+			mostrar()
+	}], ["Configurar avisos", configurarAvisos], ["Gerar URL", gerarURL], ["Limpar dados", function () {
+		_dados.versao = 0
+		location.reload()
+	}]]
+	get("cog").onclick = Menu.abrir(opcoes)
+	
+	// Coloca a opção de apps
+	if (navigator.mozApps) {
+		request = navigator.mozApps.getInstalled()
+		request.onsuccess = function () {
+			if (request.result[0])
+				setTimeout(function () {
+					request.result[0].checkForUpdate()
+				}, 15e3)
+			else
+				opcoes.push(["Instalar aplicativo", function () {
+					navigator.mozApps.install("http://unibandeco.com.br/bandeco.webapp")
+				}])
+		}
+	} else
+		opcoes.push(["Instalar aplicativo", function () {
+			alert("Essa função só está disponível no Firefox (PC ou Android)")
+		}])
 }
 
 // Avisa que agora pode receber avisos por e-mail
@@ -434,7 +463,7 @@ function voltar() {
 	_data.voltar()
 	mostrar()
 }
-onkeydown = function (e) {
+window.onkeydown = function (e) {
 	if (e.keyCode == 39)
 		avancar()
 	else if (e.keyCode == 37)
