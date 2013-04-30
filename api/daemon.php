@@ -78,7 +78,7 @@ if ($semanaAtual > $ultimaSemana) {
 	
 	// Processa as informações
 	$dados = array('semana' => date('d/m', $tempoInicio+2*Data::SEMANA/7) . ' a ' . date('d/m', $tempoFim-Data::SEMANA/7));
-	$dados['votar'] = 'http://sitegui.com.br/bandeco/#A-' . date('d/m/Y', $tempoInicio-Data::SEMANA/2) . ';?';
+	$dados['votar'] = 'http://unibandeco.com.br/#A-' . date('d/m/Y', $tempoInicio-Data::SEMANA/2) . ';?';
 	$melhor = array(-2, NULL);
 	foreach ($refeicoes as $refeicao) {
 		$nota = $refeicao->prato->getNotaMedia();
@@ -135,6 +135,6 @@ function nota2html($nota) {
 	if ($nota === NULL)
 		return '<span title="Sem nota">-</span>';
 	$html = number_format($nota, 1, ',', '.');
-	$html .= ' <img style="vertical-align:middle" src="http://sitegui.com.br/bandeco/' . ((int)round($nota)) . '.png">';
+	$html .= ' <img style="vertical-align:middle" src="http://unibandeco.com.br/' . ((int)round($nota)) . '.png">';
 	return $html;
 }
