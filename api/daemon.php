@@ -16,6 +16,9 @@ set_time_limit(90);
 // Atualiza os pratos
 $pag = 1;
 while ($dados = extrair($pag++)) {
+	// Ignora cardápio vegetariano
+	if ($dados['vegetariano']) continue;
+	
 	// Pega o id do prato
 	try {
 		$dados['prato'] = Query::query(true, 0, 'SELECT id FROM pratos WHERE nome=? LIMIT 1', $dados['prato']);
@@ -33,6 +36,7 @@ while ($dados = extrair($pag++)) {
 		$pratoDepois = Prato::instanciar($dados['prato']);
 		$dadosUpdate = $dados;
 		unset($dadosUpdate['data']);
+		unset($dadosUpdate['vegetariano']);
 		new Query('UPDATE refeicoes SET ? WHERE id=? LIMIT 1', $dadosUpdate, $idRefeicao);
 		
 		// Dispara o evento de mudança (pra bom ou pra ruim)
@@ -59,6 +63,7 @@ while ($dados = extrair($pag++)) {
 		// Insere a nova refeição
 		$dadosInsert = $dados;
 		$dadosInsert['data'] = (string)$dadosInsert['data'];
+		unset($dadosInsert['vegetariano']);
 		new Query('INSERT INTO refeicoes SET ?', $dadosInsert);
 	}
 }

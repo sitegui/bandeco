@@ -1,7 +1,7 @@
 <?php
 // Extrai as informações do site da prefeitura
 // Recebe o número da página (padrão: 1)
-// Retorna uma array com os índices: prato, guarnicao, pts, salada, sobremesa, suco, data
+// Retorna uma array com os índices: prato, guarnicao, pts, salada, sobremesa, suco, data, vegetariano
 // O índice "data" é um objeto do tipo Data
 // Em caso de erro, retorna false
 function extrair($pag=1) {
@@ -27,12 +27,13 @@ function extrair($pag=1) {
 		return false;
 	$mes = (int)substr($partes[1], 3, 2);
 	$ano = (int)substr($partes[1], 6, 4);
-	$almoco = $partes[0]!='JANTAR';
+	$almoco = strpos($partes[0], 'JANTAR')===false;
 	$data = new Data($dia, $mes, $ano, $almoco);
 	
 	// Interpreta o cardápio em si
 	$resposta = array('prato' => '', 'guarnicao' => array(), 'pts' => '', 'salada' => '', 'sobremesa' => '', 'suco' => '');
 	$resposta['data'] = $data;
+	$resposta['vegetariano'] = strpos($partes[0], 'VEGETARIANO')!==false;
 	
 	$tags = array('prato principal:  ' => 'prato', 'salada: ' => 'salada', 'sobremesa: ' => 'sobremesa', 'suco: ' => 'suco');
 	for ($i=2; $i<count($partes); $i++) {
