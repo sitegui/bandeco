@@ -6,49 +6,58 @@
 // Em caso de erro, retorna false
 function extrair($pag=1) {
 	// Pega o conteúdo da página
-	$requisicao = curl_init('http://www.prefeitura.unicamp.br/cardapio_pref.php?pagina=' . $pag);
+	
+	// Calcula a data correta para o pedido recebido	
+	$dataRequisitada = time() + ((ceil($pag/2)-1)*24*60*60);
+	$dataRequisitada = date('Y-m-d',$dataRequisitada);
+	
+	$requisicao = curl_init('http://engenheiros.prefeitura.unicamp.br/cardapio.php?d=' . $dataRequisitada);
 	curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
 	curl_setopt($requisicao, CURLOPT_RETURNTRANSFER, true);
 	$pagina = curl_exec($requisicao);
 	if (!$pagina)
 		return false;
-	
 	// Extrai as partes interessantes
 	$matches = array();
-	preg_match_all('@<th>(.*?)</th>@', $pagina, $matches);
+	//preg_match_all('@<th>(.*?)</th>@', $pagina, $matches);
+	$n = preg_match_all('@<table width="80%" class="fundo_cardapio">(.*?)</table>@s', $pagina, $matches);
+	if ($n != 3) return false;
+	
+	preg_match_all('@<td>(.*?)</td>@s', $matches[1][$pag%2 ? 0 : 2], $matches);
+
 	$partes = array_map(function ($v) {
 		return utf8_encode(strip_tags($v));
 	}, $matches[1]);
-	
+
 	// Interpreta a data
-	$dia = (int)substr($partes[1], 0, 2);
-	if (!$dia)
-		// Cardápio indisponível
-		return false;
-	$mes = (int)substr($partes[1], 3, 2);
-	$ano = (int)substr($partes[1], 6, 4);
-	$almoco = strpos($partes[0], 'JANTAR')===false;
+	$dia = (int)substr($dataRequisitada, 8, 2);
+	$mes = (int)substr($dataRequisitada, 5, 2);
+	$ano = (int)substr($dataRequisitada, 0, 4);
+	
+	$almoco = !($pag%2 ? false : true);
 	$data = new Data($dia, $mes, $ano, $almoco);
 	
 	// Interpreta o cardápio em si
 	$resposta = array('prato' => '', 'guarnicao' => array(), 'pts' => '', 'salada' => '', 'sobremesa' => '', 'suco' => '');
 	$resposta['data'] = $data;
-	$resposta['vegetariano'] = strpos($partes[0], 'VEGETARIANO')!==false;
+	$resposta['vegetariano'] = false;
 	
-	$tags = array('prato principal:  ' => 'prato', 'salada: ' => 'salada', 'sobremesa: ' => 'sobremesa', 'suco: ' => 'suco');
-	for ($i=2; $i<count($partes); $i++) {
+	$tags = array('prato principal:' => 'prato', 'salada:' => 'salada', 'sobremesa:' => 'sobremesa', 'suco:' => 'suco');
+	for ($i=0; $i<count($partes); $i++) {
 		$parte = mb_strtolower($partes[$i], 'UTF-8');
-		
+		$parte = trim($parte);
+		if ($parte == "") continue;
 		// Busca pelas tags
-		foreach ($tags as $tag=>$var)
+		foreach ($tags as $tag=>$var) {
 			if (substr($parte, 0, strlen($tag)) == $tag) {
-				$resposta[$var] = substr($parte, strlen($tag));
+				$resposta[$var] = trim(substr($parte, strlen($tag)));
 				
 				// Termina no suco
 				if ($var == 'suco') break 2;
 				
 				continue 2;
 			}
+		}
 		
 		// Busca por pts
 		if (strpos($parte, 'pts') !== false)
@@ -61,3 +70,4 @@ function extrair($pag=1) {
 	
 	return $resposta;
 }
+
