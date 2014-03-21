@@ -5,11 +5,22 @@
 // O índice "data" é um objeto do tipo Data
 // Em caso de erro, retorna false
 function extrair($pag=1) {
+	
+	// Pega lista de datas publicadas
+	$requisicao = curl_init('http://engenheiros.prefeitura.unicamp.br/cardapio.php');
+	curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
+	curl_setopt($requisicao, CURLOPT_RETURNTRANSFER, true);
+	$pagina = curl_exec($requisicao);
+	
+	$matches = array();
+	$n = preg_match_all('@<a href="cardapio.php\?d=(.*?)">@s', $pagina, $matches);
+	if ($n <= 0 || $pag-1 > $n) return false;
+	
 	// Pega o conteúdo da página
 	
 	// Calcula a data correta para o pedido recebido	
-	$dataRequisitada = time() + ((ceil($pag/2)-1)*24*60*60);
-	$dataRequisitada = date('Y-m-d',$dataRequisitada);
+
+	$dataRequisitada = $matches[1][$pag-1];
 	
 	$requisicao = curl_init('http://engenheiros.prefeitura.unicamp.br/cardapio.php?d=' . $dataRequisitada);
 	curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
@@ -19,7 +30,7 @@ function extrair($pag=1) {
 		return false;
 	// Extrai as partes interessantes
 	$matches = array();
-	//preg_match_all('@<th>(.*?)</th>@', $pagina, $matches);
+
 	$n = preg_match_all('@<table width="80%" class="fundo_cardapio">(.*?)</table>@s', $pagina, $matches);
 	if ($n != 3) return false;
 	
@@ -70,4 +81,3 @@ function extrair($pag=1) {
 	
 	return $resposta;
 }
-
