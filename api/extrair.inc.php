@@ -19,7 +19,7 @@ function extrair($pag=1) {
 	}
 	
 	$pag2 = ceil($pag/2)-1;
-	if ($pag2 > count($datas)) return false;
+	if ($pag2 >= count($datas)) return false;
 	
 	// Pega o conteúdo da página
 	
