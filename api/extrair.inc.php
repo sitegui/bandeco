@@ -8,7 +8,7 @@ function extrair($pag=1) {
 	// Pega lista de datas publicadas
 	static $datas = null;
 	if (!$datas) {
-		$requisicao = curl_init('http://engenheiros.prefeitura.unicamp.br/cardapio.php');
+		$requisicao = curl_init('http://legiao.prefeitura.unicamp.br/cardapio.php');
 		curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
 		curl_setopt($requisicao, CURLOPT_RETURNTRANSFER, true);
 		$pagina = curl_exec($requisicao);
