@@ -27,7 +27,7 @@ function extrair($pag=1) {
 
 	$dataRequisitada = $datas[$pag2];
 	
-	$requisicao = curl_init('http://engenheiros.prefeitura.unicamp.br/cardapio.php?d=' . $dataRequisitada);
+	$requisicao = curl_init('http://legiao.prefeitura.unicamp.br/cardapio.php?d=' . $dataRequisitada);
 	curl_setopt($requisicao, CURLOPT_HTTPHEADER, array('User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'));
 	curl_setopt($requisicao, CURLOPT_RETURNTRANSFER, true);
 	$pagina = curl_exec($requisicao);
