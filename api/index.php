@@ -258,6 +258,7 @@ function falharHttp() {
 
 // Retorna o valor
 function retornar($valor=NULL) {
+	header('Content-type: application/json;charset=utf-8');
 	exit(json_encode($valor));
 }
 
