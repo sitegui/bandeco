@@ -1,6 +1,9 @@
 API Bandeco
 =======
 
+*ESTE PROJETO FOI DESCONTINUADO*
+*Sinta-se libre para fazer do código o que quiser*
+
 API para obter o histórico e dados das refeições do bandejão da Unicamp.
 Documentação: http://sitegui.com.br/apis/bandeco
 
